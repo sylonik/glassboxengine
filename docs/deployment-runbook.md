@@ -113,6 +113,45 @@ The `agent` service account (Terraform, `roles/aiplatform.user`) is the identity
 - `agents-cli eval run` (from `services/glassbox-agents`) for agent-behavior validation.
 - Cloud Trace / Cloud Logging for traces and structured logs (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 
+## CI/CD — automated main → prod (GitHub Actions + Workload Identity Federation)
+
+Pushing to **`main`** runs `.github/workflows/ci.yml`, which gates and then deploys:
+
+```
+lint ─┐
+typecheck ─┴─► test ─┐
+                     ├─► build ─► deploy (prod)   ← only on push to main
+recommendation-quality ─┘
+integration / e2e (signal only, don't gate deploy)
+```
+
+**Security — keyless (no service-account keys; org policy blocks them):**
+- GitHub's OIDC token is federated to GCP via **Workload Identity Federation**
+  (`infra/terraform/modules/cicd`). The pool/provider is locked to this one repo
+  (`attribute.repository == "sylonik/glassboxengine"`), and only that repo may
+  impersonate the deploy SA `glassbox-cicd@glassbox-engine.iam.gserviceaccount.com`.
+- The deploy SA is least-privilege: `run.admin`, `artifactregistry.writer`,
+  `serviceAccountUser` on the web runtime SA, `serviceUsageConsumer`.
+- App secrets stay in **Secret Manager**, wired onto the Cloud Run service. CI
+  never reads or prints them — `gcloud run deploy` only swaps the image; the
+  secret/VPC/Cloud SQL config is preserved (Terraform ignores image drift via
+  `lifecycle.ignore_changes`).
+
+**The deploy job** authenticates via WIF, builds + pushes
+`…/glassbox-web:<sha>`, and runs `gcloud run deploy glassbox-web --image …`.
+
+To provision the WIF + deploy SA (one-time, already applied):
+```bash
+cd infra/terraform && terraform apply -target=module.apis -target=module.cicd
+```
+The WIF provider name + SA email are Terraform outputs
+(`cicd_workload_identity_provider`, `cicd_service_account_email`) and are set as
+`env:` in the workflow (non-secret identifiers).
+
+**Dev/staging (later):** add a `develop` branch + a second env (project or
+prefix), parameterize the workflow `env:` per branch, and reuse the same WIF
+pool with a branch-scoped binding (`attribute.ref`).
+
 ## Local Docker troubleshooting
 
 The web and workers images install the full pnpm workspace; back-to-back builds can fill

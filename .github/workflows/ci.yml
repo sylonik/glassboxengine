@@ -203,7 +203,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       clickhouse:
-        image: clickhouse/clickhouse-server:25-alpine
+        image: clickhouse/clickhouse-server:24.8
         ports:
           - 8123:8123
         options: >-
@@ -255,7 +255,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       clickhouse:
-        image: clickhouse/clickhouse-server:25-alpine
+        image: clickhouse/clickhouse-server:24.8
         ports:
           - 8123:8123
         options: >-

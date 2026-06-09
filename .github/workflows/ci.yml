@@ -204,6 +204,10 @@ jobs:
           --health-retries 5
       clickhouse:
         image: clickhouse/clickhouse-server:24.8
+        env:
+          # Permissive built-in default user (no password, any host) — without
+          # this the default user rejects non-localhost HTTP auth from the runner.
+          CLICKHOUSE_SKIP_USER_SETUP: 1
         ports:
           - 8123:8123
         options: >-
@@ -256,6 +260,10 @@ jobs:
           --health-retries 5
       clickhouse:
         image: clickhouse/clickhouse-server:24.8
+        env:
+          # Permissive built-in default user (no password, any host) — without
+          # this the default user rejects non-localhost HTTP auth from the runner.
+          CLICKHOUSE_SKIP_USER_SETUP: 1
         ports:
           - 8123:8123
         options: >-

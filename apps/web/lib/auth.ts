@@ -10,6 +10,11 @@ const trustedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:3002",
+  // 127.0.0.1 is a distinct origin from localhost. The e2e harness + Playwright
+  // default to 127.0.0.1, so trust the loopback variants too.
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+  "http://127.0.0.1:3002",
 ].filter((origin): origin is string => Boolean(origin));
 
 export const auth = betterAuth({

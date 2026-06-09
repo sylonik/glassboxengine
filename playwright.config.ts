@@ -19,6 +19,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Surface the Next/better-auth server logs in CI output for debugging.
+    stdout: "pipe",
+    stderr: "pipe",
   },
   projects: [
     {

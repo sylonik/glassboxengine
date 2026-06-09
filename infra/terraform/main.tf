@@ -67,6 +67,10 @@ locals {
     "artifactregistry.googleapis.com",
     "cloudtrace.googleapis.com",
     "aiplatform.googleapis.com",
+    # Agent Engine's in-engine aiplatform SDK resolves project number->ID via
+    # Cloud Resource Manager; without this, stream_query fails with
+    # "Failed to create session" (403 SERVICE_DISABLED).
+    "cloudresourcemanager.googleapis.com",
     "vpcaccess.googleapis.com",
     "compute.googleapis.com",
     # Required for Private Services Access (Cloud SQL/Redis private IPs).

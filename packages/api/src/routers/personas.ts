@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { personas, syntheticInteractions, products } from "@glassbox/database/schema";
 import type { PersonaBehaviorConfig } from "@glassbox/database";
 import {
@@ -144,6 +144,36 @@ export const personasRouter = createTRPCRouter({
         .limit(1);
       if (!persona) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Persona not found" });
+      }
+
+      // Make sure the catalog is embedded before simulating. importFeed embeds
+      // by default, but a user can disable autoEmbed, which would otherwise dead-
+      // end the simulation with a raw "generate embeddings first" error. Embed
+      // on demand here so Simulate is self-healing.
+      const [counts] = await ctx.db
+        .select({
+          total: sql<number>`count(*)`,
+          embedded: sql<number>`count(*) filter (where ${products.embedding} is not null)`,
+        })
+        .from(products)
+        .where(
+          and(
+            eq(products.userId, ctx.user.id),
+            eq(products.projectId, project.id)
+          )
+        );
+
+      const total = Number(counts?.total ?? 0);
+      const embedded = Number(counts?.embedded ?? 0);
+      if (total === 0) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Import a catalog before running a simulation.",
+        });
+      }
+      if (embedded === 0) {
+        const { runEngineerAgent } = await import("@glassbox/agents");
+        await runEngineerAgent(total, ctx.user.id, project.id);
       }
 
       // Clear previous simulation data for this persona

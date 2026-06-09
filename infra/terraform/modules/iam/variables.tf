@@ -21,6 +21,12 @@ variable "agent_sa_id" {
   default     = "glassbox-agent"
 }
 
+variable "demo_sa_id" {
+  description = "Account ID (prefix) for the demo storefront runtime service account."
+  type        = string
+  default     = "glassbox-demo"
+}
+
 variable "web_secret_ids" {
   description = "Secret Manager secret IDs the web SA is granted accessor on."
   type        = list(string)
@@ -29,6 +35,12 @@ variable "web_secret_ids" {
 
 variable "workers_secret_ids" {
   description = "Secret Manager secret IDs the workers SA is granted accessor on."
+  type        = list(string)
+  default     = []
+}
+
+variable "demo_secret_ids" {
+  description = "Secret Manager secret IDs the demo storefront SA is granted accessor on."
   type        = list(string)
   default     = []
 }

@@ -13,6 +13,11 @@ output "workers_service_name" {
   value       = module.cloud_run_workers.service_name
 }
 
+output "demo_service_url" {
+  description = "Public URL of the glassbox-demo Cloud Run service."
+  value       = module.cloud_run_demo.uri
+}
+
 # --- Artifact Registry -------------------------------------------------------
 output "artifact_registry_url" {
   description = "Base URL to push images to (append /<image>:<tag>)."
@@ -27,6 +32,11 @@ output "web_image" {
 output "workers_image" {
   description = "Fully qualified workers image reference this stack expects."
   value       = local.workers_image
+}
+
+output "demo_image" {
+  description = "Fully qualified demo storefront image reference this stack expects."
+  value       = local.demo_image
 }
 
 # --- Cloud SQL ---------------------------------------------------------------
@@ -81,6 +91,11 @@ output "workers_service_account" {
 output "agent_service_account" {
   description = "Email of the Vertex AI Agent Engine service account (used by agents-cli deploys)."
   value       = module.iam.agent_sa_email
+}
+
+output "demo_service_account" {
+  description = "Email of the demo storefront runtime service account."
+  value       = module.iam.demo_sa_email
 }
 
 # --- Secrets -----------------------------------------------------------------

@@ -89,6 +89,13 @@ export type {
   SimulatedInteraction,
 };
 
+// ---------- Persona builder (real tracked-event personas) ----------
+export {
+  buildPersonasFromEvents,
+  type BuildPersonasResult,
+  type ClickHouseQueryClient,
+} from "./persona-builder";
+
 // ---------- Tool exports (shared by legacy and ADK) ----------
 export { generateEmbedding, generateEmbeddings } from "./embedding-generator";
 export { buildSearchParams, explainSliderTranslation } from "./sql-builder";

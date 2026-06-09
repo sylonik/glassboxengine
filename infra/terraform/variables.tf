@@ -32,6 +32,12 @@ variable "workers_image_tag" {
   default     = "latest"
 }
 
+variable "demo_image_tag" {
+  description = "Tag of the glassbox-demo image to deploy."
+  type        = string
+  default     = "latest"
+}
+
 variable "artifact_repository_id" {
   description = "Artifact Registry Docker repository ID."
   type        = string
@@ -167,4 +173,11 @@ variable "github_repo" {
   type        = string
   description = "GitHub repo (owner/name) authorized for keyless CI/CD deploys."
   default     = "sylonik/glassboxengine"
+}
+
+# --- Demo storefront ---------------------------------------------------------
+variable "demo_glassbox_endpoint" {
+  description = "Base URL of the Glassbox engine the demo storefront calls (GLASSBOX_ENDPOINT)."
+  type        = string
+  default     = "https://glassbox-web-573736938351.us-central1.run.app"
 }

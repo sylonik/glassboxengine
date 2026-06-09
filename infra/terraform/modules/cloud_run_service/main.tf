@@ -29,9 +29,14 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # Route egress into the VPC so private Cloud SQL / Redis IPs are reachable.
-    vpc_access {
-      connector = var.vpc_connector_id
-      egress    = var.vpc_egress
+    # Services with no private dependencies (e.g. the demo storefront, which only
+    # needs public outbound HTTPS) set vpc_connector_id = null and skip this block.
+    dynamic "vpc_access" {
+      for_each = var.vpc_connector_id == null ? [] : [1]
+      content {
+        connector = var.vpc_connector_id
+        egress    = var.vpc_egress
+      }
     }
 
     # Attach Cloud SQL instances (enables the /cloudsql unix socket).

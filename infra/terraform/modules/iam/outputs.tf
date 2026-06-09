@@ -12,3 +12,8 @@ output "agent_sa_email" {
   description = "Email of the Vertex AI Agent Engine service account."
   value       = google_service_account.agent.email
 }
+
+output "demo_sa_email" {
+  description = "Email of the demo storefront runtime service account."
+  value       = google_service_account.demo.email
+}

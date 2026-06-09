@@ -12,3 +12,8 @@ variable "web_runtime_sa_email" {
   type        = string
   description = "Runtime service account email of the Cloud Run web service (deployer must actAs it)."
 }
+
+variable "demo_runtime_sa_email" {
+  type        = string
+  description = "Runtime service account email of the Cloud Run demo storefront service (deployer must actAs it)."
+}

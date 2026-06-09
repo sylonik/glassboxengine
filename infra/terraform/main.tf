@@ -21,6 +21,9 @@ locals {
     "CLICKHOUSE_URL",
     "CLICKHOUSE_DATABASE",
     "NEXT_PUBLIC_APP_URL",
+    # Demo storefront's API key for calling the engine. Container only; value
+    # supplied out-of-band (see docs/demo-deploy.md).
+    "DEMO_GLASSBOX_API_KEY",
   ]
 
   # Secrets consumed by the web service (Next.js + tRPC API in-process).
@@ -44,6 +47,11 @@ locals {
     "GOOGLE_API_KEY",
   ]
 
+  # Secrets consumed by the demo storefront (only its engine API key).
+  demo_secret_ids = [
+    "DEMO_GLASSBOX_API_KEY",
+  ]
+
   # Helper to build the secret_env map a Cloud Run service expects from a list
   # of secret IDs, always pulling the "latest" version.
   web_secret_env = {
@@ -55,6 +63,15 @@ locals {
   workers_secret_env = {
     for id in local.workers_secret_ids : id => {
       secret_id = module.secrets.secret_ids[id]
+      version   = "latest"
+    }
+  }
+
+  # The demo reads its engine credential from the env var GLASSBOX_API_KEY,
+  # backed by the DEMO_GLASSBOX_API_KEY secret container.
+  demo_secret_env = {
+    GLASSBOX_API_KEY = {
+      secret_id = module.secrets.secret_ids["DEMO_GLASSBOX_API_KEY"]
       version   = "latest"
     }
   }
@@ -85,6 +102,7 @@ locals {
 
   web_image     = "${local.registry_base}/glassbox-web:${var.web_image_tag}"
   workers_image = "${local.registry_base}/glassbox-workers:${var.workers_image_tag}"
+  demo_image    = "${local.registry_base}/glassbox-demo:${var.demo_image_tag}"
 }
 
 # --- APIs --------------------------------------------------------------------
@@ -164,6 +182,7 @@ module "iam" {
   project_id         = var.project_id
   web_secret_ids     = local.web_secret_ids
   workers_secret_ids = local.workers_secret_ids
+  demo_secret_ids    = local.demo_secret_ids
 
   # Secrets must exist before per-secret IAM bindings reference them.
   depends_on = [module.secrets, module.apis]
@@ -205,13 +224,50 @@ module "cloud_run_web" {
   depends_on = [module.iam, module.cloud_sql, module.redis]
 }
 
+# --- Cloud Run: demo storefront (public, no VPC/SQL) -------------------------
+# A standalone Next.js demo that talks to the engine over public HTTPS only.
+# No database, Redis, ClickHouse, or VPC — so vpc_connector_id /
+# cloudsql_connection_names are omitted (they default to null / []).
+module "cloud_run_demo" {
+  source = "./modules/cloud_run_service"
+
+  project_id            = var.project_id
+  region                = var.region
+  service_name          = "glassbox-demo"
+  image                 = local.demo_image
+  service_account_email = module.iam.demo_sa_email
+
+  ingress               = "INGRESS_TRAFFIC_ALL"
+  allow_unauthenticated = true
+
+  # No VPC connector and no Cloud SQL: the demo only needs outbound HTTPS.
+
+  container_port       = 3002
+  min_instances        = 0
+  max_instances        = 4
+  cpu                  = "1"
+  memory               = "512Mi"
+  cpu_always_allocated = false
+
+  env = {
+    NODE_ENV          = "production"
+    GLASSBOX_ENDPOINT = var.demo_glassbox_endpoint
+  }
+
+  # GLASSBOX_API_KEY comes from the DEMO_GLASSBOX_API_KEY secret container.
+  secret_env = local.demo_secret_env
+
+  depends_on = [module.iam, module.secrets]
+}
+
 # --- CI/CD (Workload Identity Federation for GitHub Actions) -----------------
 module "cicd" {
   source = "./modules/cicd"
 
-  project_id           = var.project_id
-  github_repo          = var.github_repo
-  web_runtime_sa_email = module.iam.web_sa_email
+  project_id            = var.project_id
+  github_repo           = var.github_repo
+  web_runtime_sa_email  = module.iam.web_sa_email
+  demo_runtime_sa_email = module.iam.demo_sa_email
 
   depends_on = [module.apis, module.iam]
 }

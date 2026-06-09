@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicPaths = ["/sign-in", "/sign-up", "/api/auth", "/api/trpc", "/api/health"];
+// `/api/t` is the public event-ingestion endpoint for the tracker SDK: external
+// sites POST here with an API key (Bearer header or ?key=) and carry no session
+// cookie, so it must bypass the session gate. The route handler does its own
+// API-key authentication.
+const publicPaths = [
+  "/sign-in",
+  "/sign-up",
+  "/api/auth",
+  "/api/trpc",
+  "/api/health",
+  "/api/t",
+];
 
 if (process.env.ENABLE_TEST_AUTH === "true") {
   publicPaths.push("/api/dev-auth");

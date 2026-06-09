@@ -73,6 +73,14 @@ resource "google_service_account_iam_member" "cicd_actas_web" {
   member             = "serviceAccount:${google_service_account.cicd.email}"
 }
 
+# Same actAs grant for the demo storefront runtime SA so the deploy-demo CI job
+# can deploy glassbox-demo running as that identity.
+resource "google_service_account_iam_member" "cicd_actas_demo" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${var.demo_runtime_sa_email}"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cicd.email}"
+}
+
 # --- Bind the GitHub repo's OIDC identity to the deploy SA -------------------
 # Only workflows from var.github_repo can impersonate the deploy SA.
 resource "google_service_account_iam_member" "cicd_wif" {

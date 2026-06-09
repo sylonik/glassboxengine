@@ -37,6 +37,15 @@ resource "google_service_account" "agent" {
   display_name = "GlassBox Vertex AI Agent Engine SA"
 }
 
+# Demo storefront runtime SA. Talks to the engine over public HTTPS only — no
+# Cloud SQL / Redis / VPC — so it gets NO project-level roles, only a per-secret
+# accessor on the demo's API key (granted below).
+resource "google_service_account" "demo" {
+  project      = var.project_id
+  account_id   = var.demo_sa_id
+  display_name = "GlassBox Demo Storefront (Cloud Run) runtime SA"
+}
+
 # --- Project-level roles: web ------------------------------------------------
 locals {
   web_project_roles = [
@@ -96,4 +105,13 @@ resource "google_secret_manager_secret_iam_member" "workers" {
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.workers.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "demo" {
+  for_each = toset(var.demo_secret_ids)
+
+  project   = var.project_id
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.demo.email}"
 }

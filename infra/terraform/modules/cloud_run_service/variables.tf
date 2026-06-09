@@ -39,8 +39,9 @@ variable "ingress" {
 }
 
 variable "vpc_connector_id" {
-  description = "Serverless VPC Access connector ID for VPC egress."
+  description = "Serverless VPC Access connector ID for VPC egress. Set null to run with no VPC connector (e.g. a service that only needs public outbound HTTPS)."
   type        = string
+  default     = null
 }
 
 variable "vpc_egress" {

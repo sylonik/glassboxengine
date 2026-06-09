@@ -5,7 +5,9 @@ import type { PersonaBehaviorConfig } from "@glassbox/database";
 import {
   runPersonaSimulatorAgent,
   generateBehaviorFromDescription,
+  buildPersonasFromEvents,
 } from "@glassbox/agents";
+import { getClickHouseClient } from "@glassbox/event-pipeline";
 import { ensureProject, resolveProject } from "../project_utils";
 import { createTRPCRouter, protectedProcedure } from "./trpc";
 
@@ -174,5 +176,26 @@ export const personasRouter = createTRPCRouter({
     .input(z.object({ description: z.string().min(1) }))
     .mutation(async ({ input }) => {
       return generateBehaviorFromDescription(input.description);
+    }),
+
+  buildFromEvents: protectedProcedure
+    .input(
+      z
+        .object({
+          projectId: z.string().uuid().optional(),
+          lookbackDays: z.number().int().min(1).max(365).default(30),
+          minEvents: z.number().int().min(1).max(100).default(3),
+        })
+        .optional()
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await ensureProject(ctx, input?.projectId);
+      return buildPersonasFromEvents({
+        userId: ctx.user.id,
+        projectId: project.id,
+        lookbackDays: input?.lookbackDays,
+        minEvents: input?.minEvents,
+        clickhouse: getClickHouseClient(),
+      });
     }),
 });

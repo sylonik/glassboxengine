@@ -7,6 +7,20 @@ import type { WebsiteEventPayload, WebsiteEventRow } from "../../types";
 
 const logger = createLogger("event-pipeline:website-event-worker");
 
+/**
+ * ClickHouse's default `date_time_input_format` (basic) cannot parse ISO-8601
+ * strings with a `T` separator or `Z` suffix — it errors on the `Z` and, under
+ * async_insert with wait_for_async_insert=0, silently drops the row. Incoming
+ * `createdAt` values are ISO-8601 UTC (e.g. "2026-06-09T10:39:55.997Z"). Emit
+ * the `YYYY-MM-DD HH:MM:SS.sss` form ClickHouse expects (already UTC). Falls
+ * back to now() on unparseable input so a bad timestamp never drops an event.
+ */
+function toClickHouseDateTime(value: string): string {
+  const d = new Date(value);
+  const ts = Number.isNaN(d.getTime()) ? new Date() : d;
+  return ts.toISOString().replace("T", " ").replace("Z", "");
+}
+
 function toRow(payload: WebsiteEventPayload): WebsiteEventRow {
   return {
     id: payload.id,
@@ -30,7 +44,7 @@ function toRow(payload: WebsiteEventPayload): WebsiteEventRow {
     country: payload.country,
     properties: JSON.stringify(payload.properties),
     duration_ms: payload.durationMs,
-    created_at: payload.createdAt,
+    created_at: toClickHouseDateTime(payload.createdAt),
   };
 }
 
@@ -50,6 +64,9 @@ export function startWebsiteEventWorker(): Worker<WebsiteEventPayload> {
         table: "glassbox.website_events",
         values: [toRow(job.data)],
         format: "JSONEachRow",
+        // Tolerate ISO-8601 datetimes defensively, in addition to toRow's
+        // normalization, so a future payload shape can't silently drop rows.
+        clickhouse_settings: { date_time_input_format: "best_effort" },
       });
     },
     {

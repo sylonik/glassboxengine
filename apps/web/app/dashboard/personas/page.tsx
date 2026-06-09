@@ -5,7 +5,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTRPC } from "~/trpc/client";
 import { useActiveProject } from "../project_context";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Edit2, Play, Plus, Trash2, Users } from "lucide-react";
+import {
+  Activity,
+  ChevronDown,
+  Edit2,
+  Play,
+  Plus,
+  Sparkles,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { PageHeader } from "~/components/layout/page-header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -38,6 +47,13 @@ interface SimulationResults {
   interactionCount?: number;
   simulatedAt?: string;
   summary?: string;
+  // Provenance marker written by personas.buildFromEvents
+  source?: string;
+  userKey?: string;
+  eventCount?: number;
+  sessions?: number;
+  funnel?: { views?: number; carts?: number; purchases?: number };
+  builtAt?: string;
 }
 
 interface SimulatedInteraction {
@@ -77,6 +93,8 @@ export default function PersonasPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [lookbackDays, setLookbackDays] = useState(30);
+  const [buildSummary, setBuildSummary] = useState<string | null>(null);
 
   const personas = useQuery(
     trpc.personas.list.queryOptions({ projectId: activeProjectId })
@@ -117,6 +135,29 @@ export default function PersonasPage() {
       onError: (error) => setActionError(error.message),
     })
   );
+
+  const buildFromEvents = useMutation(
+    trpc.personas.buildFromEvents.mutationOptions({
+      onSuccess: (data) => {
+        setActionError(null);
+        setBuildSummary(
+          `Analyzed ${data.usersAnalyzed} user${data.usersAnalyzed === 1 ? "" : "s"} → created ${data.personasCreated} persona${data.personasCreated === 1 ? "" : "s"} from real behavior.`
+        );
+        personas.refetch();
+        refreshProjectState();
+      },
+      onError: (error) => {
+        setBuildSummary(null);
+        setActionError(error.message);
+      },
+    })
+  );
+
+  const handleBuildFromEvents = () => {
+    setActionError(null);
+    setBuildSummary(null);
+    buildFromEvents.mutate({ projectId: activeProjectId, lookbackDays });
+  };
 
   const simulatePersona = useMutation(
     trpc.personas.simulate.mutationOptions({
@@ -184,6 +225,62 @@ export default function PersonasPage() {
           <span>{actionError}</span>
         </div>
       )}
+
+      {/* Build from tracked events */}
+      <div className="mb-6 rounded-lg border border-primary/30 bg-primary-subtle/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+              <Activity size={16} />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-foreground">
+                Build personas from tracked events
+              </div>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Group real website traffic by user and derive behavior profiles
+                from actual product views, carts, and purchases.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="lookback-days" className="text-xs text-muted-foreground">
+              Lookback
+            </Label>
+            <select
+              id="lookback-days"
+              value={lookbackDays}
+              onChange={(event) => setLookbackDays(Number(event.target.value))}
+              disabled={buildFromEvents.isPending}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value={7}>7 days</option>
+              <option value={14}>14 days</option>
+              <option value={30}>30 days</option>
+              <option value={90}>90 days</option>
+            </select>
+            <Button onClick={handleBuildFromEvents} disabled={buildFromEvents.isPending}>
+              {buildFromEvents.isPending ? (
+                <>
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Building...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  Build from events
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+        {buildSummary && (
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-success/25 bg-success-subtle p-2.5 text-sm text-foreground">
+            <StatusDot status="success" className="mt-1" />
+            <span>{buildSummary}</span>
+          </div>
+        )}
+      </div>
 
       {/* Create Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -306,6 +403,8 @@ export default function PersonasPage() {
             const isSimulating = simulatingId === persona.id;
             const interactions = simulationData[persona.id];
             const hasSimulated = !!simResults.simulatedAt;
+            const fromEvents = simResults.source === "events";
+            const funnel = simResults.funnel;
 
             return (
               <StaggerItem key={persona.id}>
@@ -333,12 +432,56 @@ export default function PersonasPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant={hasSimulated ? "default" : "secondary"}>
-                      {hasSimulated
-                        ? `${simResults.interactionCount} interactions`
-                        : `${engagement} intent`}
-                    </Badge>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      {fromEvents && (
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-primary/40 text-primary"
+                        >
+                          <Activity size={11} />
+                          From real events
+                        </Badge>
+                      )}
+                      <Badge variant={hasSimulated ? "default" : "secondary"}>
+                        {hasSimulated
+                          ? `${simResults.interactionCount} interactions`
+                          : fromEvents && simResults.eventCount !== undefined
+                            ? `${simResults.eventCount} events`
+                            : `${engagement} intent`}
+                      </Badge>
+                    </div>
                   </div>
+
+                  {/* Real-event provenance stats */}
+                  {fromEvents && (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border border-primary/20 bg-primary-subtle/30 px-3 py-2 text-xs text-muted-foreground">
+                      <span className="font-mono">
+                        {simResults.eventCount ?? 0} events
+                      </span>
+                      <span className="font-mono">
+                        {simResults.sessions ?? 0} sessions
+                      </span>
+                      <span className="h-3 w-px bg-border" />
+                      <span>
+                        <span className="font-mono text-foreground">
+                          {funnel?.views ?? 0}
+                        </span>{" "}
+                        views
+                      </span>
+                      <span>
+                        <span className="font-mono text-foreground">
+                          {funnel?.carts ?? 0}
+                        </span>{" "}
+                        carts
+                      </span>
+                      <span>
+                        <span className="font-mono text-foreground">
+                          {funnel?.purchases ?? 0}
+                        </span>{" "}
+                        purchases
+                      </span>
+                    </div>
+                  )}
 
                   {/* Behavior chips */}
                   <div className="mt-3 flex flex-wrap gap-1.5">

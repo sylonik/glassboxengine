@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "~/lib/auth_client";
 
+// Only honor same-origin relative paths to avoid open-redirect.
+function safeRedirect(value: string | null | undefined): string {
+  if (value && value.startsWith("/") && !value.startsWith("//")) return value;
+  return "/dashboard";
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message;
   if (
@@ -41,7 +47,10 @@ export default function SignInPage() {
         return;
       }
 
-      router.replace("/dashboard");
+      const target = safeRedirect(
+        new URLSearchParams(window.location.search).get("redirectTo")
+      );
+      router.replace(target);
       router.refresh();
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Invalid credentials. Please try again."));

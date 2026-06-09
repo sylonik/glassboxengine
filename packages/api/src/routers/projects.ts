@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "./trpc";
 import {
@@ -52,7 +53,7 @@ export const projectsRouter = createTRPCRouter({
   create: protectedProcedure
     .input(
       z.object({
-        name: z.string().min(1),
+        name: z.string().trim().min(1, "Project name is required"),
         description: z.string().optional(),
       })
     )
@@ -71,6 +72,44 @@ export const projectsRouter = createTRPCRouter({
       }
 
       return result[0];
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const project = await getOwnedProject(ctx, input.projectId);
+      if (!project) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+      }
+
+      // Never let a user delete their only workspace — the dashboard assumes one.
+      const owned = await ctx.db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.userId, ctx.user.id))
+        .orderBy(desc(projects.updatedAt));
+      if (owned.length <= 1) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "You can't delete your only project. Create another first.",
+        });
+      }
+
+      // All child rows cascade on the projects FK; user_project_preferences
+      // .active_project_id is ON DELETE SET NULL.
+      await ctx.db
+        .delete(projects)
+        .where(
+          and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id))
+        );
+
+      // Repoint the active project to the next most-recent remaining one.
+      const nextActive = owned.find((p) => p.id !== input.projectId);
+      if (nextActive) {
+        await setActiveProjectPreference(ctx, nextActive.id);
+      }
+
+      return { deleted: true, activeProjectId: nextActive?.id ?? null };
     }),
 
   getSetupState: protectedProcedure
@@ -238,7 +277,7 @@ export const projectsRouter = createTRPCRouter({
     .input(
       z.object({
         projectId: z.string().uuid().optional(),
-        projectName: z.string().min(1).default("Demo Commerce Project"),
+        projectName: z.string().trim().min(1).default("Demo Commerce Project"),
       })
     )
     .mutation(async ({ ctx, input }) => {

@@ -28,10 +28,12 @@ interface ProjectContextValue {
   isLoading: boolean;
   isCreatingProject: boolean;
   isSeedingDemo: boolean;
+  error: string | null;
   setActiveProject: (projectId: string) => void;
   createProject: (name: string) => void;
   seedDemoProject: () => void;
   refreshProjectState: () => void;
+  dismissError: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -52,6 +54,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const trpc = useTRPC();
   const [pendingProjectId, setPendingProjectId] = useState<string | undefined>();
   const [pendingProject, setPendingProject] = useState<Project | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const projectsQuery = useQuery(trpc.projects.list.queryOptions());
   const activeProjectQuery = useQuery(trpc.projects.getActive.queryOptions());
@@ -69,9 +72,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const setActive = useMutation(
     trpc.projects.setActive.mutationOptions({
       onSuccess: (project) => {
+        setError(null);
         setPendingProjectId(project.id);
         setPendingProject(project);
         refreshProjectState();
+      },
+      onError: (err) => {
+        // Roll back the optimistic switch to the server's truth.
+        setPendingProjectId(undefined);
+        setPendingProject(null);
+        setError(err.message || "Couldn't switch project.");
       },
     })
   );
@@ -79,24 +89,28 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const createProject = useMutation(
     trpc.projects.create.mutationOptions({
       onSuccess: (project) => {
+        setError(null);
         if (project?.id) {
           setPendingProjectId(project.id);
           setPendingProject(project);
         }
         refreshProjectState();
       },
+      onError: (err) => setError(err.message || "Couldn't create project."),
     })
   );
 
   const seedDemo = useMutation(
     trpc.projects.seedDemo.mutationOptions({
       onSuccess: (result) => {
+        setError(null);
         if (result.project?.id) {
           setPendingProjectId(result.project.id);
           setPendingProject(result.project);
         }
         refreshProjectState();
       },
+      onError: (err) => setError(err.message || "Couldn't launch demo project."),
     })
   );
 
@@ -119,19 +133,33 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         setupStateQuery.isLoading,
       isCreatingProject: createProject.isPending,
       isSeedingDemo: seedDemo.isPending,
+      error,
       setActiveProject: (projectId) => {
+        setError(null);
         setPendingProjectId(projectId);
         setActive.mutate({ projectId });
       },
-      createProject: (name) => createProject.mutate({ name }),
-      seedDemoProject: () =>
-        seedDemo.mutate({ projectId: activeProject?.id ?? undefined }),
+      createProject: (name) => {
+        const trimmed = name.trim();
+        if (!trimmed) {
+          setError("Project name is required.");
+          return;
+        }
+        setError(null);
+        createProject.mutate({ name: trimmed });
+      },
+      seedDemoProject: () => {
+        setError(null);
+        seedDemo.mutate({ projectId: activeProject?.id ?? undefined });
+      },
       refreshProjectState,
+      dismissError: () => setError(null),
     }),
     [
       activeProject,
       activeProjectQuery.isLoading,
       createProject,
+      error,
       projects,
       projectsQuery.isLoading,
       refreshProjectState,
@@ -167,6 +195,7 @@ export function ProjectSwitcher({ className = "" }: { className?: string }) {
     seedDemoProject,
     isCreatingProject,
     isSeedingDemo,
+    error,
   } = useActiveProject();
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
@@ -245,6 +274,18 @@ export function ProjectSwitcher({ className = "" }: { className?: string }) {
           </button>
         </form>
       )}
+      {error && (
+        <p
+          role="alert"
+          style={{
+            marginTop: "var(--space-2)",
+            fontSize: "var(--text-sm)",
+            color: "var(--color-danger)",
+          }}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -258,6 +299,7 @@ export function SetupGuide() {
     isCreatingProject,
     isSeedingDemo,
     refreshProjectState,
+    error,
   } = useActiveProject();
   const [projectName, setProjectName] = useState("");
 
@@ -299,6 +341,11 @@ export function SetupGuide() {
             {isSeedingDemo ? "Seeding..." : "Launch demo project"}
           </button>
         </form>
+        {error && (
+          <p className="project-error" role="alert">
+            {error}
+          </p>
+        )}
       </section>
     );
   }

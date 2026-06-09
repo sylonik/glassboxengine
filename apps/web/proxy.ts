@@ -24,7 +24,11 @@ export function proxy(request: NextRequest) {
     request.cookies.get("__Secure-better-auth.session_token");
 
   if (!sessionCookie) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    // Preserve the intended destination so the user lands where they were going
+    // after signing in (e.g. a deep link to /dashboard/catalog).
+    const signInUrl = new URL("/sign-in", request.url);
+    signInUrl.searchParams.set("redirectTo", pathname + request.nextUrl.search);
+    return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();

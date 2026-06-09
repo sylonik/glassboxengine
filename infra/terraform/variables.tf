@@ -89,9 +89,9 @@ variable "redis_memory_size_gb" {
 
 # --- Cloud Run: web ----------------------------------------------------------
 variable "web_min_instances" {
-  description = "Minimum instances for glassbox-web."
+  description = "Minimum instances for glassbox-web. Keep >=1 in prod to avoid cold-start latency on the first request."
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "web_max_instances" {

@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { appRouter } from "@glassbox/api";
 import { db } from "@glassbox/database/client";
+
+// Map tRPC error codes to HTTP status so a missing/invalid API key returns 401,
+// validation 400, rate-limit 429 — not an opaque 500.
+const TRPC_HTTP_STATUS: Record<string, number> = {
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  BAD_REQUEST: 400,
+  NOT_FOUND: 404,
+  TOO_MANY_REQUESTS: 429,
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,11 +68,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json(response, { status: 200, headers: corsHeaders });
   } catch (error) {
+    const status =
+      error instanceof TRPCError
+        ? (TRPC_HTTP_STATUS[error.code] ?? 500)
+        : 500;
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Batch event tracking failed",
       },
-      { status: 500, headers: corsHeaders }
+      { status, headers: corsHeaders }
     );
   }
 }

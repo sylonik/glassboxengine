@@ -27,13 +27,16 @@ export async function GET() {
     healthy = false;
   }
 
+  // ClickHouse powers analytics/funnels/tracking but is NOT required for the
+  // core app (auth, catalog, personas, simulate). Report its status but don't
+  // let a ClickHouse blip flip the service to 503 and cycle the Cloud Run
+  // instance — only postgres + redis are critical.
   try {
     const clickhouse = getClickHouseClient();
     await clickhouse.ping();
     checks.clickhouse = "ok";
   } catch {
     checks.clickhouse = "error";
-    healthy = false;
   }
 
   const status = healthy ? 200 : 503;

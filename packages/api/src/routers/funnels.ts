@@ -266,8 +266,12 @@ export const funnelsRouter = createTRPCRouter({
         query,
         query_params: {
           projectId: funnel.projectId,
-          since: since.toISOString(),
+          // ClickHouse's default DateTime64 parser rejects the ISO "T"/"Z"
+          // ("only 23 of 24 bytes parsed"). Match the format the rest of the
+          // codebase uses (persona-builder / website-analytics).
+          since: since.toISOString().replace("T", " ").replace("Z", ""),
         },
+        clickhouse_settings: { date_time_input_format: "best_effort" },
         format: "JSONEachRow",
       });
 

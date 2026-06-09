@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+#
+# GlassBox Engine — event-pipeline WORKERS image.
+#
+# The repo-root Dockerfile only builds the Next.js standalone web image. The
+# workers are a separate long-running process (BullMQ consumers) started via:
+#   pnpm --filter @glassbox/event-pipeline workers
+#   -> tsx src/scripts/start-workers.ts
+#
+# This is intentionally minimal: it installs the full workspace (the workers
+# import @glassbox/telemetry, @glassbox/database, etc.) and runs via tsx. There
+# is no compile/bundle step, matching how the workers run in dev.
+#
+# Build (from repo root):
+#   docker build -f Dockerfile.workers -t glassbox-workers .
+#
+# TODO (optimization, out of scope for IaC): trim to a pruned/standalone build
+#   (e.g. `turbo prune --scope=@glassbox/event-pipeline` + a compiled output)
+#   to shrink the image and drop dev dependencies.
+
+FROM node:22-alpine
+RUN corepack enable && corepack prepare pnpm@10.8.1 --activate
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy the whole monorepo and install all workspace deps. tsx (a devDependency
+# of event-pipeline) is required at runtime, so we do NOT use --prod here.
+COPY . .
+RUN pnpm install --frozen-lockfile
+
+# Start the BullMQ workers.
+CMD ["pnpm", "--filter", "@glassbox/event-pipeline", "workers"]

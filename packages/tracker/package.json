@@ -1,0 +1,30 @@
+{
+  "name": "@glassbox/tracker",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./src/index.ts"
+      },
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@glassbox/config": "workspace:*",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0"
+  }
+}

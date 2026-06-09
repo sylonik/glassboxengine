@@ -1,0 +1,14 @@
+{
+  "datasetName": "sample-feedback-export",
+  "generatedAt": "2026-06-06T21:03:33.128Z",
+  "scenarioCount": 1,
+  "gateFailures": [],
+  "releaseGatesPassed": true,
+  "summary": {
+    "averagePrecisionAt3": 1,
+    "averagePrecisionAt5": 1,
+    "averageNdcgAt5": 1,
+    "averageCategoryCoverageAt5": 0.6,
+    "averageConfidenceAt5": 0.8506387289543922
+  }
+}

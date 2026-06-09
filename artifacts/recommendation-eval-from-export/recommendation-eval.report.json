@@ -1,0 +1,63 @@
+{
+  "datasetName": "sample-feedback-export",
+  "summary": {
+    "averagePrecisionAt3": 1,
+    "averagePrecisionAt5": 1,
+    "averageNdcgAt5": 1,
+    "averageCategoryCoverageAt5": 0.6,
+    "averageConfidenceAt5": 0.8506387289543922
+  },
+  "gateFailures": [],
+  "scenarioCount": 1,
+  "generatedAt": "2026-06-06T21:03:33.128Z",
+  "scenarios": [
+    {
+      "id": "feedback-user-a",
+      "description": "Behavior-derived scenario for user-a based on 5 strong interactions across audio, accessories, care. Inferred sliders emphasize relevance=0.92, diversity=0.52, novelty=0.64, popularity=0.38.",
+      "metrics": {
+        "precisionAt3": 1,
+        "precisionAt5": 1,
+        "ndcgAt5": 1,
+        "categoryCoverageAt5": 0.6,
+        "averageConfidenceAt5": 0.8506387289543922
+      },
+      "topFive": [
+        {
+          "id": "p-audio-case",
+          "name": "Protective Headphone Case",
+          "category": "accessories",
+          "score": 0.7474103900536597,
+          "confidenceScore": 0.8892231170160979
+        },
+        {
+          "id": "p-headphones-pro",
+          "name": "Pro Wireless Headphones",
+          "category": "audio",
+          "score": 0.7328423390909753,
+          "confidenceScore": 0.8848527017272926
+        },
+        {
+          "id": "p-earbuds-anc",
+          "name": "Noise Cancelling Earbuds",
+          "category": "audio",
+          "score": 0.709722175594089,
+          "confidenceScore": 0.8779166526782267
+        },
+        {
+          "id": "p-cleaning-kit",
+          "name": "Audio Cleaning Kit",
+          "category": "care",
+          "score": 0.6992094899441768,
+          "confidenceScore": 0.804762846983253
+        },
+        {
+          "id": "p-dac-portable",
+          "name": "Portable DAC",
+          "category": "accessories",
+          "score": 0.6714610878903009,
+          "confidenceScore": 0.7964383263670902
+        }
+      ]
+    }
+  ]
+}

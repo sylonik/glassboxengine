@@ -1,0 +1,35 @@
+{
+  "name": "glassbox-engine",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "turbo db:generate",
+    "db:push": "turbo db:push",
+    "db:migrate": "turbo db:migrate",
+    "clean": "turbo clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "readiness:local": "pnpm test && pnpm build && pnpm -F @glassbox/agents eval:run-feedback-export:sample",
+    "e2e:prepare": "pnpm db:push && pnpm --filter @glassbox/event-pipeline migrate:clickhouse",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "prettier": "^3.8.3",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.5"
+  },
+  "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

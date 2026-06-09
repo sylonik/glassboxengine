@@ -1,0 +1,152 @@
+import { z } from "zod";
+import { and, eq, desc } from "drizzle-orm";
+import { createTRPCRouter, protectedProcedure } from "./trpc";
+import { scoringFunctions } from "@glassbox/database/schema";
+import { ensureProject, resolveProject } from "../project_utils";
+
+export const scoringRouter = createTRPCRouter({
+  /** List scoring functions for the current user */
+  list: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+    const project = await resolveProject(ctx, input?.projectId);
+    if (!project) return [];
+    return ctx.db
+      .select()
+      .from(scoringFunctions)
+      .where(
+        and(
+          eq(scoringFunctions.userId, ctx.user.id),
+          eq(scoringFunctions.projectId, project.id)
+        )
+      )
+      .orderBy(desc(scoringFunctions.updatedAt));
+  }),
+
+  /** Get a single scoring function */
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db
+        .select()
+        .from(scoringFunctions)
+        .where(
+          and(
+            eq(scoringFunctions.id, input.id),
+            eq(scoringFunctions.userId, ctx.user.id)
+          )
+        )
+        .limit(1);
+
+      if (result.length === 0) {
+        throw new Error("Scoring function not found");
+      }
+      return result[0];
+    }),
+
+  /** Create a new scoring function */
+  create: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid().optional(),
+        name: z.string().min(1),
+        description: z.string().optional(),
+        code: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await ensureProject(ctx, input.projectId);
+      const { projectId: _projectId, ...functionInput } = input;
+      const result = await ctx.db
+        .insert(scoringFunctions)
+        .values({
+          userId: ctx.user.id,
+          projectId: project.id,
+          ...functionInput,
+        })
+        .returning();
+
+      return result[0];
+    }),
+
+  /** Update scoring function code (draft save) */
+  updateCode: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        code: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db
+        .update(scoringFunctions)
+        .set({
+          ...(input.name ? { name: input.name } : {}),
+          code: input.code,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(scoringFunctions.id, input.id),
+            eq(scoringFunctions.userId, ctx.user.id)
+          )
+        )
+        .returning();
+
+      return result[0];
+    }),
+
+  /** Commit scoring function — triggers Mentor review */
+  commit: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Get the scoring function
+      const fn = await ctx.db
+        .select()
+        .from(scoringFunctions)
+        .where(
+          and(
+            eq(scoringFunctions.id, input.id),
+            eq(scoringFunctions.userId, ctx.user.id)
+          )
+        )
+        .limit(1);
+
+      if (fn.length === 0) throw new Error("Scoring function not found");
+
+      // Run Mentor Agent review
+      const { runMentorAgent } = await import("@glassbox/agents");
+      const review = await runMentorAgent(fn[0]!.code);
+
+      if (!review.approved) {
+        return {
+          blocked: true,
+          dialogue: review.dialogue,
+          validation: review.validation,
+        };
+      }
+
+      // Approved — commit the function
+      const result = await ctx.db
+        .update(scoringFunctions)
+        .set({
+          isCommitted: true,
+          version: (fn[0]!.version ?? 0) + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(scoringFunctions.id, input.id),
+            eq(scoringFunctions.userId, ctx.user.id)
+          )
+        )
+        .returning();
+
+      return {
+        blocked: false,
+        dialogue: review.dialogue,
+        function: result[0],
+      };
+    }),
+});

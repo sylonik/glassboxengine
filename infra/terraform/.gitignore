@@ -1,0 +1,20 @@
+# Terraform state & local files — never commit
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+
+# Local variable files (may contain secrets like db_password)
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Keep the example and the provider lock file checked in:
+!terraform.tfvars.example
+!.terraform.lock.hcl
+.db_password

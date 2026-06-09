@@ -1,0 +1,51 @@
+###############################################################################
+# Example tfvars for GlassBox Engine infra.
+#
+# Copy to terraform.tfvars and fill in. Do NOT commit terraform.tfvars with a
+# real db_password — prefer the TF_VAR_db_password env var for secrets.
+###############################################################################
+
+# --- Required ---------------------------------------------------------------
+project_id = "my-gcp-project-id"
+
+# --- Common ------------------------------------------------------------------
+region      = "us-central1"
+name_prefix = "glassbox"
+
+# --- Images (set to your pushed tags; defaults to "latest") ------------------
+web_image_tag          = "latest"
+workers_image_tag      = "latest"
+artifact_repository_id = "glassbox"
+
+# --- Cloud SQL ---------------------------------------------------------------
+db_user = "glassbox"
+# Prefer:  export TF_VAR_db_password='...'   (do not hardcode here)
+# db_password                  = "CHANGE_ME"
+cloudsql_tier                = "db-custom-2-7680"
+cloudsql_availability_type   = "ZONAL" # use "REGIONAL" for HA in production
+cloudsql_deletion_protection = true
+
+# --- Redis -------------------------------------------------------------------
+redis_memory_size_gb = 1
+
+# --- Cloud Run: web ----------------------------------------------------------
+web_min_instances = 0
+web_max_instances = 10
+web_cpu           = "1"
+web_memory        = "1Gi"
+
+# --- Cloud Run: workers ------------------------------------------------------
+workers_min_instances = 1
+workers_max_instances = 3
+workers_cpu           = "1"
+workers_memory        = "512Mi"
+
+# --- Observability (Cloud Trace via OTLP) ------------------------------------
+otel_service_name = "glassbox-engine"
+# Point at your OTel collector endpoint. Leave empty to disable trace export.
+otel_exporter_otlp_endpoint = ""
+
+# --- ClickHouse (EXTERNAL — not provisioned) ---------------------------------
+# Only the non-secret DB name lives here; the URL/credentials go in the
+# CLICKHOUSE_URL secret (set out-of-band). See README "ClickHouse (external)".
+clickhouse_database = "glassbox"

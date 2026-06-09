@@ -1,0 +1,91 @@
+{
+  "name": "sample-feedback-export",
+  "scenarios": [
+    {
+      "id": "feedback-user-a",
+      "description": "Behavior-derived scenario for user-a based on 5 strong interactions across audio, accessories, care. Inferred sliders emphasize relevance=0.92, diversity=0.52, novelty=0.64, popularity=0.38.",
+      "sliders": {
+        "relevance": 0.92,
+        "diversity": 0.52,
+        "novelty": 0.64,
+        "popularity": 0.38
+      },
+      "candidates": [
+        {
+          "id": "p-headphones-pro",
+          "name": "Pro Wireless Headphones",
+          "category": "audio",
+          "similarity": 0.9500000000000001,
+          "diversitySignal": 0.5,
+          "noveltySignal": 0.7463414634146341,
+          "popularitySignal": 1
+        },
+        {
+          "id": "p-earbuds-anc",
+          "name": "Noise Cancelling Earbuds",
+          "category": "audio",
+          "similarity": 0.9500000000000001,
+          "diversitySignal": 0.5,
+          "noveltySignal": 0.8219512195121951,
+          "popularitySignal": 0.5
+        },
+        {
+          "id": "p-audio-case",
+          "name": "Protective Headphone Case",
+          "category": "accessories",
+          "similarity": 0.9500000000000001,
+          "diversitySignal": 0.6666666666666667,
+          "noveltySignal": 0.9658536585365853,
+          "popularitySignal": 0.5
+        },
+        {
+          "id": "p-dac-portable",
+          "name": "Portable DAC",
+          "category": "accessories",
+          "similarity": 0.8500000000000001,
+          "diversitySignal": 0.6666666666666667,
+          "noveltySignal": 0.9243902439024391,
+          "popularitySignal": 0.5
+        },
+        {
+          "id": "p-cleaning-kit",
+          "name": "Audio Cleaning Kit",
+          "category": "care",
+          "similarity": 0.8500000000000001,
+          "diversitySignal": 0.8333333333333334,
+          "noveltySignal": 1,
+          "popularitySignal": 0.5
+        },
+        {
+          "id": "p-floor-lamp",
+          "name": "Modern Floor Lamp",
+          "category": "home",
+          "similarity": 0.1,
+          "diversitySignal": 1,
+          "noveltySignal": 0,
+          "popularitySignal": 0.5
+        },
+        {
+          "id": "p-speaker-mini",
+          "name": "Portable Bluetooth Speaker",
+          "category": "speakers",
+          "similarity": 0.1,
+          "diversitySignal": 1,
+          "noveltySignal": 0.22439024390243903,
+          "popularitySignal": 0
+        }
+      ],
+      "relevantIds": [
+        "p-headphones-pro",
+        "p-earbuds-anc",
+        "p-audio-case",
+        "p-dac-portable",
+        "p-cleaning-kit"
+      ],
+      "expectedTopIds": [
+        "p-headphones-pro",
+        "p-earbuds-anc"
+      ]
+    }
+  ]
+}

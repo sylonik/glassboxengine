@@ -1,0 +1,157 @@
+{
+  "datasetName": "built-in-fixtures",
+  "summary": {
+    "averagePrecisionAt3": 1,
+    "averagePrecisionAt5": 0.6666666666666666,
+    "averageNdcgAt5": 1,
+    "averageCategoryCoverageAt5": 0.6000000000000001,
+    "averageConfidenceAt5": 0.6783434667000793
+  },
+  "gateFailures": [],
+  "scenarios": [
+    {
+      "id": "high-intent-headphones",
+      "description": "A focused shopper looking for premium headphones should see strong semantic matches first.",
+      "metrics": {
+        "precisionAt3": 1,
+        "precisionAt5": 0.6,
+        "ndcgAt5": 1,
+        "categoryCoverageAt5": 0.4,
+        "averageConfidenceAt5": 0.634087731822474
+      },
+      "topFive": [
+        {
+          "id": "p-headphones-pro",
+          "name": "Pro Wireless Headphones",
+          "category": "Electronics",
+          "score": 0.7288810198300283,
+          "confidenceScore": 0.8836643059490084
+        },
+        {
+          "id": "p-headphones-lite",
+          "name": "Lightweight Wireless Headphones",
+          "category": "Electronics",
+          "score": 0.672579792256846,
+          "confidenceScore": 0.8317739376770539
+        },
+        {
+          "id": "p-earbuds-anc",
+          "name": "Noise Cancelling Earbuds",
+          "category": "Electronics",
+          "score": 0.6463290525653131,
+          "confidenceScore": 0.7818987157695939
+        },
+        {
+          "id": "p-speaker-mini",
+          "name": "Portable Bluetooth Speaker",
+          "category": "Electronics",
+          "score": 0.4210399748190116,
+          "confidenceScore": 0.49031199244570345
+        },
+        {
+          "id": "p-office-chair",
+          "name": "Ergonomic Office Chair",
+          "category": "Furniture",
+          "score": 0.18929902423670128,
+          "confidenceScore": 0.18278970727101038
+        }
+      ]
+    },
+    {
+      "id": "exploration-home-lifestyle",
+      "description": "An exploratory shopper should still get relevant home and lifestyle items, but with healthy category spread.",
+      "metrics": {
+        "precisionAt3": 1,
+        "precisionAt5": 0.8,
+        "ndcgAt5": 1,
+        "categoryCoverageAt5": 0.8,
+        "averageConfidenceAt5": 0.6662122010869564
+      },
+      "topFive": [
+        {
+          "id": "p-lamp-modern",
+          "name": "Modern Floor Lamp",
+          "category": "Home",
+          "score": 0.6071251207729469,
+          "confidenceScore": 0.728137536231884
+        },
+        {
+          "id": "p-throw-blanket",
+          "name": "Woven Throw Blanket",
+          "category": "Textiles",
+          "score": 0.569845652173913,
+          "confidenceScore": 0.6889536956521739
+        },
+        {
+          "id": "p-ceramic-vase",
+          "name": "Ceramic Accent Vase",
+          "category": "Decor",
+          "score": 0.5515403079710144,
+          "confidenceScore": 0.6484620923913043
+        },
+        {
+          "id": "p-candle-set",
+          "name": "Aromatherapy Candle Set",
+          "category": "Wellness",
+          "score": 0.5310270531400966,
+          "confidenceScore": 0.628308115942029
+        },
+        {
+          "id": "p-desk-lamp-basic",
+          "name": "Basic Desk Lamp",
+          "category": "Home",
+          "score": 0.4439985507246377,
+          "confidenceScore": 0.6371995652173913
+        }
+      ]
+    },
+    {
+      "id": "fresh-fashion-drop",
+      "description": "A novelty-seeking shopper should see fresh arrivals elevated without losing basic relevance.",
+      "metrics": {
+        "precisionAt3": 1,
+        "precisionAt5": 0.6,
+        "ndcgAt5": 1,
+        "categoryCoverageAt5": 0.6,
+        "averageConfidenceAt5": 0.7347304671908071
+      },
+      "topFive": [
+        {
+          "id": "p-sneakers-new",
+          "name": "Fresh Drop Street Sneakers",
+          "category": "Footwear",
+          "score": 0.6574236468097974,
+          "confidenceScore": 0.7572270940429391
+        },
+        {
+          "id": "p-jacket-new",
+          "name": "New Arrival Utility Jacket",
+          "category": "Fashion",
+          "score": 0.6524882068339884,
+          "confidenceScore": 0.7697464620501965
+        },
+        {
+          "id": "p-bag-new",
+          "name": "Limited Edition Crossbody Bag",
+          "category": "Accessories",
+          "score": 0.6291784094345327,
+          "confidenceScore": 0.7137535228303598
+        },
+        {
+          "id": "p-jacket-best-seller",
+          "name": "Best Seller Denim Jacket",
+          "category": "Fashion",
+          "score": 0.5144673420018142,
+          "confidenceScore": 0.7353402026005442
+        },
+        {
+          "id": "p-sneakers-classic",
+          "name": "Classic Running Sneakers",
+          "category": "Footwear",
+          "score": 0.48195018143332324,
+          "confidenceScore": 0.6975850544299969
+        }
+      ]
+    }
+  ]
+}

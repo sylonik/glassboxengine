@@ -1,0 +1,103 @@
+{
+  "datasetName": "sample-feedback-export",
+  "products": [
+    {
+      "id": "p-headphones-pro",
+      "name": "Pro Wireless Headphones",
+      "category": "audio",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "p-earbuds-anc",
+      "name": "Noise Cancelling Earbuds",
+      "category": "audio",
+      "createdAt": "2026-02-01T00:00:00.000Z"
+    },
+    {
+      "id": "p-speaker-mini",
+      "name": "Portable Bluetooth Speaker",
+      "category": "speakers",
+      "createdAt": "2025-06-01T00:00:00.000Z"
+    },
+    {
+      "id": "p-dac-portable",
+      "name": "Portable DAC",
+      "category": "accessories",
+      "createdAt": "2026-03-15T00:00:00.000Z"
+    },
+    {
+      "id": "p-floor-lamp",
+      "name": "Modern Floor Lamp",
+      "category": "home",
+      "createdAt": "2025-03-01T00:00:00.000Z"
+    },
+    {
+      "id": "p-audio-case",
+      "name": "Protective Headphone Case",
+      "category": "accessories",
+      "createdAt": "2026-04-01T00:00:00.000Z"
+    },
+    {
+      "id": "p-cleaning-kit",
+      "name": "Audio Cleaning Kit",
+      "category": "care",
+      "createdAt": "2026-04-15T00:00:00.000Z"
+    }
+  ],
+  "feedbackEvents": [
+    {
+      "endUserId": "user-a",
+      "productId": "p-headphones-pro",
+      "eventType": "click",
+      "createdAt": "2026-05-01T10:00:00.000Z"
+    },
+    {
+      "endUserId": "user-a",
+      "productId": "p-headphones-pro",
+      "eventType": "purchase",
+      "createdAt": "2026-05-02T10:00:00.000Z"
+    },
+    {
+      "endUserId": "user-a",
+      "productId": "p-earbuds-anc",
+      "eventType": "cart_add",
+      "createdAt": "2026-05-03T10:00:00.000Z"
+    },
+    {
+      "endUserId": "user-a",
+      "productId": "p-dac-portable",
+      "eventType": "click",
+      "createdAt": "2026-05-04T10:00:00.000Z"
+    },
+    {
+      "endUserId": "user-a",
+      "productId": "p-audio-case",
+      "eventType": "cart_add",
+      "createdAt": "2026-05-05T10:00:00.000Z"
+    },
+    {
+      "endUserId": "user-a",
+      "productId": "p-cleaning-kit",
+      "eventType": "click",
+      "createdAt": "2026-05-06T10:00:00.000Z"
+    },
+    {
+      "endUserId": "user-b",
+      "productId": "p-floor-lamp",
+      "eventType": "view",
+      "createdAt": "2026-05-05T10:00:00.000Z"
+    }
+  ],
+  "recommendationEvents": [
+    {
+      "endUserId": "user-a",
+      "sliders": {
+        "relevance": 0.92,
+        "diversity": 0.52,
+        "novelty": 0.64,
+        "popularity": 0.38
+      },
+      "createdAt": "2026-05-06T12:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@glassbox/sdk",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "superjson": "^2.2.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@glassbox/config": "workspace:*"
+  }
+}

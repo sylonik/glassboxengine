@@ -1,0 +1,109 @@
+{
+  "datasetName": "sample-catalog-personas",
+  "summary": {
+    "averagePrecisionAt3": 1,
+    "averagePrecisionAt5": 0.8,
+    "averageNdcgAt5": 1,
+    "averageCategoryCoverageAt5": 0.6,
+    "averageConfidenceAt5": 0.6950186965707856
+  },
+  "gateFailures": [],
+  "scenarios": [
+    {
+      "id": "headphones-focused-sample",
+      "description": "A shopper looking for premium wireless audio should see strong headphone matches at the top.",
+      "metrics": {
+        "precisionAt3": 1,
+        "precisionAt5": 0.8,
+        "ndcgAt5": 1,
+        "categoryCoverageAt5": 0.6,
+        "averageConfidenceAt5": 0.7191008561653209
+      },
+      "topFive": [
+        {
+          "id": "sample-headphones-pro",
+          "name": "Sample Pro Wireless Headphones",
+          "category": "audio",
+          "score": 0.7148427808950324,
+          "confidenceScore": 0.8654528342685097
+        },
+        {
+          "id": "sample-headphones-lite",
+          "name": "Sample Lightweight Headphones",
+          "category": "audio",
+          "score": 0.672665225126591,
+          "confidenceScore": 0.8177995675379772
+        },
+        {
+          "id": "sample-earbuds",
+          "name": "Sample Noise Cancelling Earbuds",
+          "category": "audio",
+          "score": 0.625331285069112,
+          "confidenceScore": 0.7545993855207336
+        },
+        {
+          "id": "sample-dac",
+          "name": "Sample Portable DAC",
+          "category": "accessories",
+          "score": 0.5969725742438758,
+          "confidenceScore": 0.6970917722731628
+        },
+        {
+          "id": "sample-speaker",
+          "name": "Sample Portable Speaker",
+          "category": "speakers",
+          "score": 0.3918690707540715,
+          "confidenceScore": 0.46056072122622144
+        }
+      ]
+    },
+    {
+      "id": "fashion-freshness-sample",
+      "description": "A novelty-seeking fashion shopper should see fresh arrivals ahead of stale bestsellers.",
+      "metrics": {
+        "precisionAt3": 1,
+        "precisionAt5": 0.8,
+        "ndcgAt5": 1,
+        "categoryCoverageAt5": 0.6,
+        "averageConfidenceAt5": 0.6709365369762502
+      },
+      "topFive": [
+        {
+          "id": "sample-sneakers-new",
+          "name": "Sample Fresh Drop Sneakers",
+          "category": "fashion",
+          "score": 0.5817405676771579,
+          "confidenceScore": 0.6785221703031473
+        },
+        {
+          "id": "sample-jacket-new",
+          "name": "Sample New Utility Jacket",
+          "category": "fashion",
+          "score": 0.576800411919933,
+          "confidenceScore": 0.6980401235759798
+        },
+        {
+          "id": "sample-bag-new",
+          "name": "Sample Limited Edition Bag",
+          "category": "accessories",
+          "score": 0.5661031795069833,
+          "confidenceScore": 0.6528309538520949
+        },
+        {
+          "id": "sample-cap-new",
+          "name": "Sample New Arrival Cap",
+          "category": "headwear",
+          "score": 0.5503351934092812,
+          "confidenceScore": 0.6341005580227843
+        },
+        {
+          "id": "sample-jacket-best",
+          "name": "Sample Best Seller Jacket",
+          "category": "fashion",
+          "score": 0.4606295970908156,
+          "confidenceScore": 0.6911888791272446
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+import { and, eq, sql } from "drizzle-orm";
+import { BaseAgent, createEvent, createEventActions, type InvocationContext, type Event } from "@google/adk";
+import { db } from "@glassbox/database/client";
+import { products } from "@glassbox/database/schema";
+import { generateEmbeddings } from "../../embedding-generator";
+import type { CatalogScanResult } from "../../engineer";
+
+/**
+ * Engineer Agent (BaseAgent): Scans the product catalog and generates
+ * embeddings for products that don't have them yet.
+ *
+ * This is a deterministic batch pipeline with no LLM reasoning,
+ * so it extends BaseAgent directly rather than using LlmAgent.
+ */
+export class EngineerAgent extends BaseAgent {
+  constructor() {
+    super({
+      name: "engineer",
+      description:
+        "Scans product catalog and generates embeddings for products missing them",
+    });
+  }
+
+  protected async *runAsyncImpl(
+    context: InvocationContext
+  ): AsyncGenerator<Event, void, void> {
+    const batchSize =
+      (context.session.state["temp:batch_size"] as number | undefined) ?? 10;
+    const userId = context.session.state["temp:user_id"] as
+      | string
+      | undefined;
+    const projectId = context.session.state["temp:project_id"] as
+      | string
+      | undefined;
+
+    const conditions = [sql`${products.embedding} IS NULL`];
+    if (userId) conditions.push(eq(products.userId, userId));
+    if (projectId) conditions.push(eq(products.projectId, projectId));
+
+    // 1. Get products without embeddings
+    const productsWithout = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        category: products.category,
+      })
+      .from(products)
+      .where(and(...conditions))
+      .limit(batchSize);
+
+    // 2. Generate embeddings in batches
+    let newlyEmbedded = 0;
+
+    if (productsWithout.length > 0) {
+      const texts = productsWithout.map((p) => {
+        const parts = [p.name];
+        if (p.description) parts.push(p.description);
+        if (p.category) parts.push(`Category: ${p.category}`);
+        return parts.join(". ");
+      });
+
+      const embeddings = await generateEmbeddings(texts);
+
+      // 3. Update products with embeddings
+      for (let i = 0; i < productsWithout.length; i++) {
+        const embedding = embeddings[i];
+        if (embedding && embedding.length > 0) {
+          await db
+            .update(products)
+            .set({ embedding, updatedAt: new Date() })
+            .where(eq(products.id, productsWithout[i]!.id));
+          newlyEmbedded++;
+        }
+      }
+    }
+
+    // 4. Get final stats
+    const userConditions = [
+      ...(userId ? [eq(products.userId, userId)] : []),
+      ...(projectId ? [eq(products.projectId, projectId)] : []),
+    ];
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(products)
+      .where(userConditions.length > 0 ? and(...userConditions) : undefined);
+
+    const embeddedResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(products)
+      .where(
+        and(
+          sql`${products.embedding} IS NOT NULL`,
+          ...userConditions
+        )
+      );
+
+    const categoriesResult = await db
+      .selectDistinct({ category: products.category })
+      .from(products)
+      .where(
+        and(
+          sql`${products.category} IS NOT NULL`,
+          ...userConditions
+        )
+      );
+
+    const total = Number(totalResult[0]?.count ?? 0);
+    const withEmbeddings = Number(embeddedResult[0]?.count ?? 0);
+
+    const result: CatalogScanResult = {
+      totalProducts: total,
+      withEmbeddings,
+      withoutEmbeddings: total - withEmbeddings,
+      categories: categoriesResult
+        .map((r) => r.category)
+        .filter(Boolean) as string[],
+      newlyEmbedded,
+    };
+
+    // Store in session state for the runner to extract
+    context.session.state["temp:engineer_result"] = result;
+
+    yield createEvent({
+      author: this.name,
+      content: {
+        role: "model",
+        parts: [{ text: JSON.stringify(result) }],
+      },
+      actions: createEventActions({
+        stateDelta: { "temp:engineer_result": result },
+      }),
+    });
+  }
+
+  protected async *runLiveImpl(
+    _context: InvocationContext
+  ): AsyncGenerator<Event, void, void> {
+    throw new Error("EngineerAgent does not support live mode");
+  }
+}
+
+export const engineerAgent = new EngineerAgent();

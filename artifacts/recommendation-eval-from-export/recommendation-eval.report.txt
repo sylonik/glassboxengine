@@ -1,0 +1,20 @@
+GlassBox Recommendation Quality Report
+
+Dataset: sample-feedback-export
+Generated: 2026-06-06T21:03:33.128Z
+Scenarios: 1
+
+Summary
+- Average precision@3: 1.000
+- Average precision@5: 1.000
+- Average ndcg@5: 1.000
+- Average category coverage@5: 0.600
+- Average confidence@5: 0.851
+- Release gates: PASS
+- Thresholds: p@3>=0.770, p@5>=0.660, ndcg@5>=0.900, category@5>=0.560, conf@5>=0.630
+
+feedback-user-a
+- Behavior-derived scenario for user-a based on 5 strong interactions across audio, accessories, care. Inferred sliders emphasize relevance=0.92, diversity=0.52, novelty=0.64, popularity=0.38.
+- Metrics: p@3=1.000, p@5=1.000, ndcg@5=1.000, category@5=0.600, conf@5=0.851
+- Top 5: Protective Headphone Case (0.889) | Pro Wireless Headphones (0.885) | Noise Cancelling Earbuds (0.878) | Audio Cleaning Kit (0.805) | Portable DAC (0.796)
+

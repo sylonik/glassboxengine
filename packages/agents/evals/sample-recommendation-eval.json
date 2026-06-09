@@ -1,0 +1,157 @@
+{
+  "name": "sample-catalog-personas",
+  "scenarios": [
+    {
+      "id": "headphones-focused-sample",
+      "description": "A shopper looking for premium wireless audio should see strong headphone matches at the top.",
+      "sliders": {
+        "relevance": 0.78,
+        "diversity": 0.24,
+        "novelty": 0.18,
+        "popularity": 0.52
+      },
+      "relevantIds": [
+        "sample-headphones-pro",
+        "sample-headphones-lite",
+        "sample-earbuds",
+        "sample-dac"
+      ],
+      "expectedTopIds": [
+        "sample-headphones-pro",
+        "sample-headphones-lite"
+      ],
+      "candidates": [
+        {
+          "id": "sample-headphones-pro",
+          "name": "Sample Pro Wireless Headphones",
+          "category": "audio",
+          "similarity": 0.93,
+          "diversitySignal": 0.58,
+          "noveltySignal": 0.34,
+          "popularitySignal": 0.79
+        },
+        {
+          "id": "sample-headphones-lite",
+          "name": "Sample Lightweight Headphones",
+          "category": "audio",
+          "similarity": 0.88,
+          "diversitySignal": 0.55,
+          "noveltySignal": 0.52,
+          "popularitySignal": 0.61
+        },
+        {
+          "id": "sample-earbuds",
+          "name": "Sample Noise Cancelling Earbuds",
+          "category": "audio",
+          "similarity": 0.81,
+          "diversitySignal": 0.56,
+          "noveltySignal": 0.47,
+          "popularitySignal": 0.67
+        },
+        {
+          "id": "sample-speaker",
+          "name": "Sample Portable Speaker",
+          "category": "speakers",
+          "similarity": 0.49,
+          "diversitySignal": 0.62,
+          "noveltySignal": 0.41,
+          "popularitySignal": 0.57
+        },
+        {
+          "id": "sample-chair",
+          "name": "Sample Ergonomic Chair",
+          "category": "office",
+          "similarity": 0.18,
+          "diversitySignal": 1,
+          "noveltySignal": 0.37,
+          "popularitySignal": 0.52
+        },
+        {
+          "id": "sample-dac",
+          "name": "Sample Portable DAC",
+          "category": "accessories",
+          "similarity": 0.74,
+          "diversitySignal": 0.93,
+          "noveltySignal": 0.56,
+          "popularitySignal": 0.44
+        }
+      ]
+    },
+    {
+      "id": "fashion-freshness-sample",
+      "description": "A novelty-seeking fashion shopper should see fresh arrivals ahead of stale bestsellers.",
+      "sliders": {
+        "relevance": 0.42,
+        "diversity": 0.63,
+        "novelty": 0.92,
+        "popularity": 0.21
+      },
+      "relevantIds": [
+        "sample-sneakers-new",
+        "sample-jacket-new",
+        "sample-bag-new",
+        "sample-cap-new"
+      ],
+      "expectedTopIds": [
+        "sample-sneakers-new",
+        "sample-jacket-new"
+      ],
+      "candidates": [
+        {
+          "id": "sample-sneakers-new",
+          "name": "Sample Fresh Drop Sneakers",
+          "category": "fashion",
+          "similarity": 0.72,
+          "diversitySignal": 0.91,
+          "noveltySignal": 0.98,
+          "popularitySignal": 0.26
+        },
+        {
+          "id": "sample-jacket-new",
+          "name": "Sample New Utility Jacket",
+          "category": "fashion",
+          "similarity": 0.75,
+          "diversitySignal": 0.76,
+          "noveltySignal": 0.96,
+          "popularitySignal": 0.22
+        },
+        {
+          "id": "sample-bag-new",
+          "name": "Sample Limited Edition Bag",
+          "category": "accessories",
+          "similarity": 0.69,
+          "diversitySignal": 1,
+          "noveltySignal": 0.95,
+          "popularitySignal": 0.19
+        },
+        {
+          "id": "sample-jacket-best",
+          "name": "Sample Best Seller Jacket",
+          "category": "fashion",
+          "similarity": 0.79,
+          "diversitySignal": 0.31,
+          "noveltySignal": 0.18,
+          "popularitySignal": 0.92
+        },
+        {
+          "id": "sample-sneakers-classic",
+          "name": "Sample Classic Running Sneakers",
+          "category": "fashion",
+          "similarity": 0.71,
+          "diversitySignal": 0.25,
+          "noveltySignal": 0.22,
+          "popularitySignal": 0.86
+        },
+        {
+          "id": "sample-cap-new",
+          "name": "Sample New Arrival Cap",
+          "category": "headwear",
+          "similarity": 0.67,
+          "diversitySignal": 1,
+          "noveltySignal": 0.94,
+          "popularitySignal": 0.17
+        }
+      ]
+    }
+  ]
+}

@@ -72,6 +72,11 @@ function parseCsvCatalog(content: string): Record<string, unknown>[] {
 }
 
 function tokenizeCsv(content: string): string[][] {
+  // Strip a leading UTF-8 BOM (Excel/Sheets exports include one) so the first
+  // header cell isn't "﻿name", which would break name/title column matching.
+  if (content.charCodeAt(0) === 0xfeff) {
+    content = content.slice(1);
+  }
   const rows: string[][] = [];
   let currentCell = "";
   let currentRow: string[] = [];

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { personas, syntheticInteractions, products } from "@glassbox/database/schema";
 import type { PersonaBehaviorConfig } from "@glassbox/database";
@@ -126,6 +127,24 @@ export const personasRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const project = await ensureProject(ctx, input.projectId);
+
+      // Verify the persona belongs to this user + project before touching its
+      // interactions. Without this check any authenticated user could wipe and
+      // overwrite another tenant's persona simply by guessing its id (IDOR).
+      const [persona] = await ctx.db
+        .select({ id: personas.id })
+        .from(personas)
+        .where(
+          and(
+            eq(personas.id, input.personaId),
+            eq(personas.userId, ctx.user.id),
+            eq(personas.projectId, project.id)
+          )
+        )
+        .limit(1);
+      if (!persona) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Persona not found" });
+      }
 
       // Clear previous simulation data for this persona
       await ctx.db

@@ -144,26 +144,44 @@ export const catalogRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const project = await ensureProject(ctx, input.projectId);
-      const result = await ctx.db
-        .insert(products)
-        .values(
-          input.items.map((item) => ({
-            ...item,
-            userId: ctx.user.id,
-            projectId: project.id,
-          }))
-        )
-        .onConflictDoUpdate({
-          target: products.externalId,
-          set: {
-            name: sql`excluded.name`,
-            description: sql`excluded.description`,
-            category: sql`excluded.category`,
-            metadata: sql`excluded.metadata`,
-            updatedAt: new Date(),
-          },
-        })
-        .returning();
+
+      // Namespace external ids by project (global unique constraint) and dedupe
+      // within the batch so repeated ids don't crash ON CONFLICT. Items without
+      // an external id can't conflict (NULLs are distinct), so pass them through.
+      const scopedById = new Map<string, (typeof input.items)[number]>();
+      const withoutId: (typeof input.items)[number][] = [];
+      for (const item of input.items) {
+        if (item.externalId) {
+          const externalId = `${project.id}:${item.externalId}`;
+          scopedById.set(externalId, { ...item, externalId });
+        } else {
+          withoutId.push(item);
+        }
+      }
+      const items = [...scopedById.values(), ...withoutId];
+
+      const result = items.length
+        ? await ctx.db
+            .insert(products)
+            .values(
+              items.map((item) => ({
+                ...item,
+                userId: ctx.user.id,
+                projectId: project.id,
+              }))
+            )
+            .onConflictDoUpdate({
+              target: products.externalId,
+              set: {
+                name: sql`excluded.name`,
+                description: sql`excluded.description`,
+                category: sql`excluded.category`,
+                metadata: sql`excluded.metadata`,
+                updatedAt: new Date(),
+              },
+            })
+            .returning()
+        : [];
 
       return { imported: result.length };
     }),
@@ -491,34 +509,49 @@ async function runCatalogImport(params: {
     sourceKey: `${params.sourceType}:${params.sourceLabel}`,
   });
 
-  const result = await params.db
-    .insert(products)
-    .values(
-      normalizedItems.map((item) => ({
-        userId: params.userId,
-        projectId: params.project.id,
-        name: item.name,
-        description: item.description,
-        category: item.category,
-        externalId: item.externalId,
-        metadata: {
-          ...(item.metadata ?? {}),
-          sourceLabel: params.sourceLabel,
-          sourceType: params.sourceType,
-        },
-      }))
-    )
-    .onConflictDoUpdate({
-      target: products.externalId,
-      set: {
-        name: sql`excluded.name`,
-        description: sql`excluded.description`,
-        category: sql`excluded.category`,
-        metadata: sql`excluded.metadata`,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
+  // Namespace every external ID by project. `products.external_id` carries a
+  // GLOBAL unique constraint, so two projects importing the same raw id (e.g. a
+  // CSV "id" column of 1,2,3) would otherwise collide and silently overwrite
+  // each other's rows. The demo seed already namespaces ids the same way.
+  // The Map also dedupes within a single import so a CSV with repeated ids does
+  // not trip Postgres' "ON CONFLICT DO UPDATE cannot affect row a second time".
+  const scopedById = new Map<string, (typeof normalizedItems)[number]>();
+  for (const item of normalizedItems) {
+    const externalId = `${params.project.id}:${item.externalId}`;
+    scopedById.set(externalId, { ...item, externalId });
+  }
+  const dedupedItems = [...scopedById.values()];
+
+  const result = dedupedItems.length
+    ? await params.db
+        .insert(products)
+        .values(
+          dedupedItems.map((item) => ({
+            userId: params.userId,
+            projectId: params.project.id,
+            name: item.name,
+            description: item.description,
+            category: item.category,
+            externalId: item.externalId,
+            metadata: {
+              ...(item.metadata ?? {}),
+              sourceLabel: params.sourceLabel,
+              sourceType: params.sourceType,
+            },
+          }))
+        )
+        .onConflictDoUpdate({
+          target: products.externalId,
+          set: {
+            name: sql`excluded.name`,
+            description: sql`excluded.description`,
+            category: sql`excluded.category`,
+            metadata: sql`excluded.metadata`,
+            updatedAt: new Date(),
+          },
+        })
+        .returning()
+    : [];
 
   const importedAt = new Date().toISOString();
   const sourceEntry = {

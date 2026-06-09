@@ -1,8 +1,17 @@
 import Link from "next/link";
 import type { Block, MarketingPage } from "~/lib/marketing/content";
 import { collectFaq } from "~/lib/marketing/content";
-import { breadcrumbLd, faqLd } from "~/lib/seo";
+import { breadcrumbLd, faqLd, techArticleLd } from "~/lib/seo";
 import { JsonLd } from "./json-ld";
+
+const EXPLORE = [
+  { label: "Compare", href: "/compare", desc: "GlassBox vs black-box recommenders" },
+  { label: "Features", href: "/features", desc: "Explainability, cold start, alignment, mentor" },
+  { label: "Use cases", href: "/use-cases", desc: "E-commerce, marketplaces, media, B2B" },
+  { label: "Pricing", href: "/pricing", desc: "Free to start" },
+  { label: "FAQ", href: "/faq", desc: "Common questions, answered" },
+  { label: "Contact", href: "/contact", desc: "Demos, enterprise, partnerships" },
+];
 
 const ACCENTS: Record<string, string> = {
   indigo: "var(--lp-indigo)",
@@ -230,6 +239,16 @@ export function MarketingPageView({ page }: { page: MarketingPage }) {
   const faq = collectFaq(page);
   const ld: object[] = [breadcrumbLd(page.breadcrumb)];
   if (faq.length) ld.push(faqLd(faq));
+  if (page.slug.startsWith("/features/")) {
+    ld.push(
+      techArticleLd({
+        title: page.title,
+        description: page.description,
+        path: page.slug,
+      })
+    );
+  }
+  const related = EXPLORE.filter((e) => e.href !== page.slug).slice(0, 4);
 
   return (
     <main className="lp-page">
@@ -277,6 +296,22 @@ export function MarketingPageView({ page }: { page: MarketingPage }) {
           <BlockView key={i} block={block} index={i} />
         ))}
       </div>
+
+      <aside className="lp-related" aria-label="Keep exploring">
+        <p className="lp-eyebrow">
+          <span className="lp-dot" /> Keep exploring
+        </p>
+        <div className="lp-related-grid">
+          {related.map((r) => (
+            <Link key={r.href} href={r.href} className="lp-related-card">
+              <span className="lp-related-label">
+                {r.label} <span className="lp-arrow">→</span>
+              </span>
+              <span className="lp-related-desc">{r.desc}</span>
+            </Link>
+          ))}
+        </div>
+      </aside>
     </main>
   );
 }

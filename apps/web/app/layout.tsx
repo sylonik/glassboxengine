@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "~/styles/globals.css";
 import "~/styles/themes.css";
 import { TRPCReactProvider } from "~/trpc/client";
@@ -43,6 +43,13 @@ export const metadata: Metadata = {
     title: "GlassBox Engine — Explainable Recommendation Infrastructure",
     description: SITE_DESCRIPTION,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#050506",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

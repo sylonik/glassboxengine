@@ -4,11 +4,30 @@ import type { Metadata } from "next";
  * Canonical site constants + SEO helpers for the GlassBox marketing site.
  * The production domain is glassboxengine.dev; override with NEXT_PUBLIC_SITE_URL.
  */
-export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "https://glassboxengine.dev"
-).replace(/\/$/, "");
+const FALLBACK_SITE_URL = "https://glassboxengine.dev";
+
+function resolveSiteUrl(): string {
+  // `??` does not catch empty strings, and `.env.production` ships empty
+  // placeholders — guard against "" / whitespace / invalid URLs so canonical,
+  // metadataBase, OG and sitemap URLs are always a valid absolute URL in prod.
+  const found = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+  ].find((v) => typeof v === "string" && v.trim().length > 0);
+  let url = (found ?? FALLBACK_SITE_URL).trim().replace(/\/$/, "");
+  try {
+    new URL(url);
+  } catch {
+    url = FALLBACK_SITE_URL;
+  }
+  return url;
+}
+
+export const SITE_URL = resolveSiteUrl();
+
+/** Editorial dates for Article structured data (kept stable for SSG determinism). */
+export const CONTENT_PUBLISHED = "2026-06-09";
+export const CONTENT_MODIFIED = "2026-06-09";
 
 export const SITE_NAME = "GlassBox Engine";
 export const SITE_TAGLINE = "Make every recommendation explain itself.";
@@ -138,5 +157,38 @@ export function faqLd(items: { q: string; a: string }[]) {
       name: item.q,
       acceptedAnswer: { "@type": "Answer", text: item.a },
     })),
+  };
+}
+
+export function techArticleLd({
+  title,
+  description,
+  path,
+}: {
+  title: string;
+  description: string;
+  path: string;
+}) {
+  const url = absoluteUrl(path);
+  const publisher = {
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: { "@type": "ImageObject", url: absoluteUrl("/icon.svg") },
+  };
+  return {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: title,
+    description,
+    url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    image: absoluteUrl(`${path}/opengraph-image`),
+    datePublished: CONTENT_PUBLISHED,
+    dateModified: CONTENT_MODIFIED,
+    inLanguage: "en-US",
+    author: { "@type": "Organization", name: BUILDER.name, url: BUILDER.url },
+    publisher,
+    about: { "@type": "SoftwareApplication", name: SITE_NAME, url: SITE_URL },
   };
 }

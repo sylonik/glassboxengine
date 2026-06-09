@@ -334,6 +334,15 @@
 .lp-ctablock .lp-block-intro { margin: 16px auto 0; }
 .lp-ctablock .lp-cta-row { justify-content: center; margin-top: 28px; }
 
+/* keep exploring — internal links */
+.lp-related { padding: 0 0 clamp(72px,9vw,120px); border-top: 1px solid var(--lp-line); padding-top: clamp(40px,5vw,56px); }
+.lp-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+.lp-related-card { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; border: 1px solid var(--lp-line); border-radius: 14px; background: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0)); transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), border-color 0.25s; }
+.lp-related-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--lp-indigo) 40%, var(--lp-line)); }
+.lp-related-label { font-size: 15px; font-weight: 600; color: var(--lp-ink); }
+.lp-related-card:hover .lp-arrow { transform: translateX(4px); }
+.lp-related-desc { font-size: 13px; color: var(--lp-dim); line-height: 1.5; }
+
 /* ── responsive ── */
 @media (max-width: 900px) {
   .lp-hero { grid-template-columns: 1fr; }
@@ -349,6 +358,7 @@
   .lp-stepsblock { grid-template-columns: 1fr; gap: 24px; }
   .lp-sitefooter-top { grid-template-columns: 1fr; gap: 32px; }
   .lp-sitefooter-cols { grid-template-columns: repeat(2, 1fr); }
+  .lp-related-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   .lp-rise, .lp-glassbox, .lp-tracecard, .lp-spectrum span, .lp-dot { animation: none !important; opacity: 1 !important; transform: none !important; }

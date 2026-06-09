@@ -2,29 +2,30 @@ FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.8.1 --activate
 WORKDIR /app
 
-# --- Dependencies ---
-# Only the demo-store dependency graph: the app itself, the @glassbox/tracker
-# package it embeds, and tracker's @glassbox/config devDep. tracker's tsup
-# devDep IS needed to build it, so a normal (non --prod) install is correct.
-FROM base AS deps
+# --- Builder ---
+# Install the demo-store dependency graph and build in a SINGLE stage. Installing
+# in the same stage that builds keeps pnpm's symlinked node_modules layout intact
+# (cross-stage `COPY node_modules` can break the .bin symlinks, so tracker's tsup
+# binary went missing — "sh: tsup: not found"). Only the demo's graph is needed:
+# the app, the @glassbox/tracker package it embeds, and tracker's @glassbox/config
+# devDep. tracker's tsup devDep IS required to build it, so a normal (non --prod)
+# install is correct.
+FROM base AS builder
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/demo-store/package.json ./apps/demo-store/package.json
 COPY packages/tracker/package.json ./packages/tracker/package.json
 COPY packages/config/package.json ./packages/config/package.json
 RUN pnpm install --frozen-lockfile
-
-# --- Builder ---
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/demo-store/node_modules ./apps/demo-store/node_modules
+# Bring the source. `.dockerignore` excludes every node_modules, so this never
+# clobbers the install above (and a build is reproducible regardless of whatever
+# node_modules happen to exist on the host).
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Build ONLY the demo app and its workspace dependency graph. This builds
-# @glassbox/tracker (via tsup) first, then demo-store. A full `turbo build`
-# would also build apps/web + apps/example-site, whose deps are not installed
-# in the deps stage above, so a full build fails inside the image.
-# The demo app reads GLASSBOX_API_KEY / GLASSBOX_ENDPOINT at RUNTIME, so no
-# build-time placeholder .env is needed (unlike apps/web).
+# Build ONLY the demo app and its workspace graph: @glassbox/tracker (via tsup)
+# first, then demo-store. A full `turbo build` would also build apps/web +
+# apps/example-site, whose deps are not installed here, so it would fail.
+# The demo reads GLASSBOX_API_KEY / GLASSBOX_ENDPOINT at RUNTIME, so no build-time
+# placeholder .env is needed (unlike apps/web).
 RUN pnpm exec turbo build --filter=demo-store
 # This app ships no static public assets; ensure the dir exists so the runner
 # stage's `COPY apps/demo-store/public` succeeds (and still works if assets get added).

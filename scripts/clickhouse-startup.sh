@@ -22,12 +22,25 @@ fi
 
 mkdir -p /var/lib/clickhouse
 
-docker run -d \
-  --name "${CH_NAME}" \
-  --restart always \
-  --ulimit nofile=262144:262144 \
-  -p 8123:8123 \
-  -p 9000:9000 \
-  -e CLICKHOUSE_SKIP_USER_SETUP=1 \
-  -v /var/lib/clickhouse:/var/lib/clickhouse \
-  "${CH_IMAGE}"
+# Pull with retry: on a fresh boot, Cloud NAT egress can take a minute to become
+# usable, so the first `docker run` may fail to reach Docker Hub. Retry rather
+# than leave the VM with no ClickHouse until the next manual reset.
+for attempt in $(seq 1 20); do
+  if docker run -d \
+    --name "${CH_NAME}" \
+    --restart always \
+    --ulimit nofile=262144:262144 \
+    -p 8123:8123 \
+    -p 9000:9000 \
+    -e CLICKHOUSE_SKIP_USER_SETUP=1 \
+    -v /var/lib/clickhouse:/var/lib/clickhouse \
+    "${CH_IMAGE}"; then
+    echo "clickhouse started (attempt ${attempt})"
+    exit 0
+  fi
+  echo "clickhouse start failed (attempt ${attempt}) — egress may not be ready; retrying in 15s"
+  docker rm -f "${CH_NAME}" 2>/dev/null || true
+  sleep 15
+done
+echo "clickhouse failed to start after retries" >&2
+exit 1

@@ -88,10 +88,15 @@ gcloud builds submit --config cloudbuild.demo.yaml \
 gcloud run deploy glassbox-demo \
   --image "${REGISTRY}/glassbox-demo:${TAG}" \
   --region "$REGION" --project "$PROJECT" \
+  --service-account "glassbox-demo@${PROJECT}.iam.gserviceaccount.com" \
   --port 3002 --allow-unauthenticated \
   --min-instances 0 --max-instances 4 --cpu 1 --memory 512Mi \
   --set-env-vars "NODE_ENV=production,GLASSBOX_ENDPOINT=${ENGINE_URL},GLASSBOX_API_KEY=${GLASSBOX_API_KEY}" \
   --quiet
+# Runs as the dedicated least-privilege runtime SA (not the default compute SA).
+# Required so CI's image-only `gcloud run deploy` preserves this SA, which the CI
+# deploy SA (glassbox-cicd@) has been granted iam.serviceAccountUser on — without
+# it, deploy-demo fails with PERMISSION_DENIED: iam.serviceaccounts.actAs.
 DEMO_URL="$(gcloud run services describe glassbox-demo --region "$REGION" --project "$PROJECT" --format='value(status.url)')"
 echo "    demo live at: ${DEMO_URL}"
 

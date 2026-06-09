@@ -11,6 +11,7 @@ import {
   recommendationEvents,
 } from "@glassbox/database/schema";
 import { createPolicySpec, normalizeSliderConfig, runCoordinator } from "@glassbox/agents";
+import { resolveProject } from "../project_utils";
 
 function buildStructuredTrace(logs: Array<{
   action: string;
@@ -137,11 +138,15 @@ export const glassBoxRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const conditions = [eq(auditLogs.userId, ctx.user.id)];
+      // Scope to the active project so the dashboard's Recent Activity panel
+      // never shows audit logs from the user's other projects.
+      const project = await resolveProject(ctx, input.projectId);
+      if (!project) return [];
 
-      if (input.projectId) {
-        conditions.push(eq(auditLogs.projectId, input.projectId));
-      }
+      const conditions = [
+        eq(auditLogs.userId, ctx.user.id),
+        eq(auditLogs.projectId, project.id),
+      ];
 
       if (input.action) {
         conditions.push(eq(auditLogs.action, input.action));

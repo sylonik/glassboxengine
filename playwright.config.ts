@@ -5,7 +5,10 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 45_000,
+  timeout: 90_000,
+  // `next dev` compiles each route on first hit (cold /-compile was ~10s in CI),
+  // so give assertions generous headroom to avoid timeout-only flakes.
+  expect: { timeout: 20_000 },
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 2 : 0,

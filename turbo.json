@@ -1,6 +1,27 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "REDIS_URL",
+    "CLICKHOUSE_URL",
+    "CLICKHOUSE_DATABASE",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "GOOGLE_API_KEY",
+    "GLASSBOX_EMBEDDING_MODEL",
+    "GLASSBOX_USE_ADK",
+    "GLASSBOX_AGENT_SERVICE_URL",
+    "ENABLE_TEST_AUTH",
+    "NEXT_PUBLIC_APP_URL",
+    "OTEL_SERVICE_NAME",
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "LOG_LEVEL",
+    "PG_POOL_MAX",
+    "PG_IDLE_TIMEOUT",
+    "PG_CONNECT_TIMEOUT",
+    "PG_MAX_LIFETIME"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

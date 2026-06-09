@@ -274,6 +274,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Enable pgvector in the test database
+        run: psql "postgresql://glassbox:glassbox@localhost:5432/glassbox_test" -c "CREATE EXTENSION IF NOT EXISTS vector"
       - run: pnpm e2e:prepare
         env:
           DATABASE_URL: "postgresql://glassbox:glassbox@localhost:5432/glassbox_test"

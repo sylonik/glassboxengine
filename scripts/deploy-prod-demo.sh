@@ -31,7 +31,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 : "${GLASSBOX_API_KEY:?Set GLASSBOX_API_KEY to the demo gb_live_ ingestion key}"
 
-echo "==> 1/8  ClickHouse VM (${VM})"
+echo "==> 1/8  Cloud NAT + ClickHouse VM (${VM})"
+# The VM has no external IP. It needs Cloud NAT for egress to Docker Hub to pull
+# the ClickHouse image (Private Google Access alone doesn't cover docker.io).
+# NAT must exist before the VM's first boot so its startup-script can pull.
+gcloud compute routers create glassbox-nat-router \
+  --network "$NETWORK" --region "$REGION" --project "$PROJECT" 2>/dev/null || echo "    router exists"
+gcloud compute routers nats create glassbox-nat \
+  --router glassbox-nat-router --region "$REGION" --project "$PROJECT" \
+  --auto-allocate-nat-external-ips --nat-all-subnet-ip-ranges 2>/dev/null || echo "    nat exists"
 if ! gcloud compute instances describe "$VM" --zone "$ZONE" --project "$PROJECT" >/dev/null 2>&1; then
   gcloud compute instances create "$VM" \
     --project "$PROJECT" --zone "$ZONE" \

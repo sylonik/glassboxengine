@@ -87,6 +87,12 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
         autoClicks: false,
         flushInterval: 2000,
         flushSize: 3,
+        // This is a demonstration storefront whose entire purpose is to show
+        // live event tracking. The tracker disables itself when the browser
+        // sends Do Not Track / GPC, which silently breaks the demo on any
+        // privacy-configured browser. Opt out of DNT here so the demo always
+        // emits events (real production sites should leave this at its default).
+        respectDoNotTrack: false,
       });
 
       globalTracker = instance;

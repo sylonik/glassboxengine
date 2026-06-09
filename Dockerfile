@@ -29,11 +29,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # @next/env, not inherited process env, so the values must live in this file. No
 # real connections are made at build; real values are injected by Cloud Run at
 # runtime. Override NEXT_PUBLIC_* via build args for production client bundles.
+# NEXT_PUBLIC_SITE_URL is the canonical public origin baked into SEO output
+# (canonical tags, Open Graph, sitemap, JSON-LD) — it must be the real domain,
+# NOT the localhost app-url placeholder. lib/seo.ts reads it first.
+ARG NEXT_PUBLIC_SITE_URL=https://glassboxengine.dev
 RUN rm -f apps/web/.env && printf '%s\n' \
     'DATABASE_URL=postgresql://build:build@localhost:5432/build' \
     'BETTER_AUTH_SECRET=build-time-placeholder-secret-min-32-characters' \
     'BETTER_AUTH_URL=http://localhost:3000' \
     'NEXT_PUBLIC_APP_URL=http://localhost:3000' \
+    "NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}" \
     'CLICKHOUSE_URL=http://localhost:8123' \
     'CLICKHOUSE_DATABASE=glassbox' \
     'REDIS_URL=redis://localhost:6379' \

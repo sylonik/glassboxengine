@@ -1,35 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// `/api/t` is the public event-ingestion endpoint for the tracker SDK: external
-// sites POST here with an API key (Bearer header or ?key=) and carry no session
-// cookie, so it must bypass the session gate. The route handler does its own
-// API-key authentication.
-const publicPaths = [
-  "/sign-in",
-  "/sign-up",
-  "/api/auth",
-  "/api/trpc",
-  "/api/health",
-  "/api/t",
-];
-
-if (process.env.ENABLE_TEST_AUTH === "true") {
-  publicPaths.push("/api/dev-auth");
-}
+// The dashboard is the only session-gated surface. Everything else is public:
+// the marketing/SEO pages, auth pages, metadata routes (sitemap, robots, icons,
+// opengraph-image), and the public APIs — which authenticate themselves
+// (`/api/t` and `/api/glassbox.*` use API keys; tRPC uses protectedProcedure).
+// Gating an allowlist-of-public broke every time a public page was added, so we
+// gate the private prefix instead.
+const PROTECTED_PREFIXES = ["/dashboard"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (publicPaths.some((path) => pathname.startsWith(path))) {
-    return NextResponse.next();
-  }
-
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.includes(".")
-  ) {
+  const isProtected = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+  if (!isProtected) {
     return NextResponse.next();
   }
 
@@ -37,7 +23,7 @@ export function proxy(request: NextRequest) {
     request.cookies.get("better-auth.session_token") ??
     request.cookies.get("__Secure-better-auth.session_token");
 
-  if (!sessionCookie && pathname !== "/") {
+  if (!sessionCookie) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 

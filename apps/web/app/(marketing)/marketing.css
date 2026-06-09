@@ -1,391 +1,9 @@
-import Link from "next/link";
-import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
+/* =================================================================
+   GlassBox marketing site — shared design system
+   Self-contained `.lp-*` world (independent of the dashboard theme).
+   Loaded by app/(marketing)/layout.tsx for the landing + all SEO pages.
+   ================================================================= */
 
-const display = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--lp-display",
-  display: "swap",
-});
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--lp-mono",
-  display: "swap",
-});
-
-const SDK_SNIPPET = `import { GlassBox } from "@glassbox/sdk";
-
-const gb = new GlassBox({ apiKey: "gb_live_…" });
-
-// 1 · a ranked feed, aligned to business intent
-const feed = await gb.getPersonalizedFeed("user-123", {
-  sliders: { relevance: 0.8, diversity: 0.6 },
-});
-
-// 2 · the faithful reasoning behind any result
-const why = await gb.getReasoningChain("user-123", feed.items[0].itemId);
-
-// 3 · close the loop
-await gb.trackEvent({ endUserId: "user-123", eventType: "click" });`;
-
-const PILLARS = [
-  {
-    no: "01",
-    kicker: "Explainability",
-    title: "Reasoning Traces",
-    color: "var(--lp-indigo)",
-    body: "Every ranked item carries a faithful, queryable trace — the factors, the weights, the score breakdown. No prompt-spun stories. Only what the ranking math actually did.",
-    icon: (
-      <>
-        <path d="M4 7h16M4 12h10M4 17h7" />
-        <circle cx="18.5" cy="15.5" r="3.2" />
-        <path d="M21 18l2 2" />
-      </>
-    ),
-  },
-  {
-    no: "02",
-    kicker: "Cold Start",
-    title: "Persona Lab",
-    color: "var(--lp-cyan)",
-    body: "Pre-warm the model before you have a single real event. Generate synthetic audiences, simulate their behaviour, and derive preference vectors that rank from day zero.",
-    icon: (
-      <>
-        <circle cx="9" cy="8" r="3.2" />
-        <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
-        <path d="M16 7.5a3 3 0 0 1 0 5.4M17.5 19a5.5 5.5 0 0 0-3-4.9" />
-      </>
-    ),
-  },
-  {
-    no: "03",
-    kicker: "Logic Drift",
-    title: "Intent Sliders",
-    color: "var(--lp-emerald)",
-    body: "Re-align the reward function in real time. Drag relevance, diversity, novelty and popularity — and watch the ranking and its trace move with you, deterministically.",
-    icon: (
-      <>
-        <path d="M5 5v14M12 5v14M19 5v14" />
-        <circle cx="5" cy="9" r="2.2" />
-        <circle cx="12" cy="14" r="2.2" />
-        <circle cx="19" cy="8" r="2.2" />
-      </>
-    ),
-  },
-  {
-    no: "04",
-    kicker: "Education",
-    title: "Socratic Mentor",
-    color: "var(--lp-amber)",
-    body: "Commit a custom scoring function and a mentor reviews it like a senior engineer — Socratic questions on math, security and performance, before anything ships.",
-    icon: (
-      <>
-        <path d="M12 3 2.5 8 12 13l9.5-5L12 3Z" />
-        <path d="M6 10.5V15c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5" />
-        <path d="M21.5 8v5" />
-      </>
-    ),
-  },
-];
-
-const STEPS = [
-  {
-    no: "Align",
-    body: "UI sliders compile to a versioned PolicySpec — a normalized reward function with author, constraints and a timestamp.",
-  },
-  {
-    no: "Rank",
-    body: "The Architect translates policy into a pgvector search and a deterministic weighted score across every candidate.",
-  },
-  {
-    no: "Trace",
-    body: "The Reasoner assembles a faithful explanation from the actual inputs and scores — queryable later by trace id.",
-  },
-];
-
-export default function LandingPage() {
-  return (
-    <div className={`lp ${display.variable} ${mono.variable}`}>
-      {/* ── Nav ─────────────────────────────────────────── */}
-      <header className="lp-nav">
-        <Link href="/" className="lp-brand" aria-label="GlassBox home">
-          <span className="lp-mark">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="2" />
-              <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" opacity="0.28" />
-              <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="currentColor" />
-            </svg>
-          </span>
-          <span className="lp-wordmark">GlassBox</span>
-        </Link>
-        <nav className="lp-navlinks">
-          <a href="#pillars">Pillars</a>
-          <a href="#how">How it works</a>
-          <a href="#developers">Developers</a>
-        </nav>
-        <div className="lp-navcta">
-          <Link href="/sign-in" className="lp-link-muted">
-            Sign in
-          </Link>
-          <Link href="/sign-up" className="lp-btn lp-btn-primary">
-            Get started
-          </Link>
-        </div>
-      </header>
-
-      {/* ── Hero ────────────────────────────────────────── */}
-      <section className="lp-hero">
-        <div className="lp-hero-grid" aria-hidden />
-        <div className="lp-hero-glow" aria-hidden />
-
-        <div className="lp-hero-copy">
-          <p className="lp-eyebrow lp-rise" style={{ animationDelay: "40ms" }}>
-            <span className="lp-dot" /> Explainable recommendation infrastructure
-          </p>
-          <h1 className="lp-h1">
-            <span className="lp-rise" style={{ animationDelay: "120ms" }}>
-              Make every
-            </span>{" "}
-            <span className="lp-rise" style={{ animationDelay: "200ms" }}>
-              recommendation
-            </span>
-            <br />
-            <span className="lp-rise lp-spectrum-text" style={{ animationDelay: "300ms" }}>
-              explain itself.
-            </span>
-          </h1>
-          <p className="lp-sub lp-rise" style={{ animationDelay: "440ms" }}>
-            GlassBox turns black-box ranking into a glass box. Align the reward
-            function with live sliders, pre-warm cold starts with synthetic
-            personas, and ship a <em>faithful reasoning trace</em> with every
-            result.
-          </p>
-          <div className="lp-cta-row lp-rise" style={{ animationDelay: "560ms" }}>
-            <Link href="/sign-up" className="lp-btn lp-btn-primary lp-btn-lg">
-              Start building <span className="lp-arrow">→</span>
-            </Link>
-            <Link href="/dashboard" className="lp-btn lp-btn-ghost lp-btn-lg">
-              Explore the live demo
-            </Link>
-          </div>
-          <ul className="lp-pipechips lp-rise" style={{ animationDelay: "680ms" }}>
-            <li>align</li>
-            <li className="lp-arrowchip">→</li>
-            <li>rank</li>
-            <li className="lp-arrowchip">→</li>
-            <li>trace</li>
-          </ul>
-        </div>
-
-        {/* Refraction visual: a beam enters the glass box, leaves as spectrum */}
-        <div className="lp-prism lp-rise" style={{ animationDelay: "520ms" }} aria-hidden>
-          <div className="lp-beam-in" />
-          <div className="lp-glassbox">
-            <span className="lp-glassbox-core" />
-          </div>
-          <div className="lp-spectrum">
-            <span style={{ background: "var(--lp-indigo)" }} />
-            <span style={{ background: "var(--lp-cyan)" }} />
-            <span style={{ background: "var(--lp-emerald)" }} />
-            <span style={{ background: "var(--lp-amber)" }} />
-          </div>
-          {/* a sample trace card, the product's actual artifact */}
-          <div className="lp-tracecard">
-            <div className="lp-tracecard-head">
-              <span className="lp-tracecard-tag">reasoning.trace</span>
-              <span className="lp-conf">0.91</span>
-            </div>
-            <p className="lp-tracecard-title">Ergonomic Standing Desk · #1</p>
-            <div className="lp-bars">
-              <i style={{ width: "82%", background: "var(--lp-indigo)" }} />
-              <i style={{ width: "54%", background: "var(--lp-emerald)" }} />
-              <i style={{ width: "33%", background: "var(--lp-amber)" }} />
-            </div>
-            <p className="lp-tracecard-foot">
-              relevance 0.54 · diversity 0.31 · novelty 0.06
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── The shift ───────────────────────────────────── */}
-      <section className="lp-shift">
-        <div className="lp-shift-card lp-shift-black">
-          <span className="lp-shift-label">today</span>
-          <h3>The black box ranks.</h3>
-          <p>
-            You see <em>what</em> surfaced — never <em>why</em>. Drift is
-            invisible, cold starts stall, and &ldquo;trust me&rdquo; is the only
-            explanation.
-          </p>
-          <div className="lp-noise" aria-hidden />
-        </div>
-        <div className="lp-shift-arrow" aria-hidden>
-          →
-        </div>
-        <div className="lp-shift-card lp-shift-glass">
-          <span className="lp-shift-label">with glassbox</span>
-          <h3>The glass box explains.</h3>
-          <p>
-            Every score is decomposed, every policy is versioned, every trace is
-            queryable. Transparency is the default, not an afterthought.
-          </p>
-          <div className="lp-spectrum-edge" aria-hidden />
-        </div>
-      </section>
-
-      {/* ── Pillars ─────────────────────────────────────── */}
-      <section id="pillars" className="lp-section">
-        <div className="lp-section-head">
-          <p className="lp-eyebrow">
-            <span className="lp-dot" /> Four value pillars
-          </p>
-          <h2 className="lp-h2">
-            Built on transparency,{" "}
-            <span className="lp-display-italic">not trust.</span>
-          </h2>
-        </div>
-        <div className="lp-pillars">
-          {PILLARS.map((p) => (
-            <article
-              key={p.no}
-              className="lp-pillar"
-              style={{ ["--c" as string]: p.color }}
-            >
-              <div className="lp-pillar-top">
-                <span className="lp-pillar-no">{p.no}</span>
-                <span className="lp-pillar-icon">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {p.icon}
-                  </svg>
-                </span>
-              </div>
-              <p className="lp-pillar-kicker">{p.kicker}</p>
-              <h3 className="lp-pillar-title">{p.title}</h3>
-              <p className="lp-pillar-body">{p.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* ── How it works ────────────────────────────────── */}
-      <section id="how" className="lp-section lp-how">
-        <div className="lp-section-head">
-          <p className="lp-eyebrow">
-            <span className="lp-dot" /> The pipeline
-          </p>
-          <h2 className="lp-h2">
-            One deterministic path:{" "}
-            <span className="lp-display-italic">align → rank → trace.</span>
-          </h2>
-        </div>
-        <div className="lp-steps">
-          {STEPS.map((s, i) => (
-            <div key={s.no} className="lp-step">
-              <span className="lp-step-no">{String(i + 1).padStart(2, "0")}</span>
-              <h3>{s.no}</h3>
-              <p>{s.body}</p>
-              {i < STEPS.length - 1 && <span className="lp-step-line" aria-hidden />}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Developers ──────────────────────────────────── */}
-      <section id="developers" className="lp-section lp-dev">
-        <div className="lp-dev-copy">
-          <p className="lp-eyebrow">
-            <span className="lp-dot" /> For builders
-          </p>
-          <h2 className="lp-h2">
-            A transparent feed in{" "}
-            <span className="lp-display-italic">three calls.</span>
-          </h2>
-          <p className="lp-sub">
-            A typed SDK over a tRPC core. Rank, fetch the reasoning behind any
-            result, and stream feedback back to close the loop — without ever
-            losing the audit trail.
-          </p>
-          <ul className="lp-dev-list">
-            <li>
-              <b>pgvector</b> semantic retrieval with a deterministic re-rank
-            </li>
-            <li>
-              <b>Faithful traces</b> stored and queryable by id
-            </li>
-            <li>
-              <b>API keys, events &amp; analytics</b> built in
-            </li>
-          </ul>
-        </div>
-        <div className="lp-code">
-          <div className="lp-code-head">
-            <span className="lp-dots">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="lp-code-file">feed.ts</span>
-          </div>
-          <pre className="lp-code-body">
-            <code>{SDK_SNIPPET}</code>
-          </pre>
-        </div>
-      </section>
-
-      {/* ── Final CTA ───────────────────────────────────── */}
-      <section className="lp-final">
-        <div className="lp-final-glow" aria-hidden />
-        <h2 className="lp-final-h">
-          Ship recommendations{" "}
-          <span className="lp-spectrum-text">people can trust.</span>
-        </h2>
-        <p className="lp-sub">
-          Connect a catalog, drag a slider, read the trace. Free to start.
-        </p>
-        <div className="lp-cta-row lp-center">
-          <Link href="/sign-up" className="lp-btn lp-btn-primary lp-btn-lg">
-            Get started <span className="lp-arrow">→</span>
-          </Link>
-          <Link href="/dashboard" className="lp-btn lp-btn-ghost lp-btn-lg">
-            See the live demo
-          </Link>
-        </div>
-      </section>
-
-      {/* ── Footer ──────────────────────────────────────── */}
-      <footer className="lp-footer">
-        <div className="lp-brand">
-          <span className="lp-mark">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="2" />
-              <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" opacity="0.28" />
-              <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="currentColor" />
-            </svg>
-          </span>
-          <span className="lp-wordmark">GlassBox</span>
-        </div>
-        <p className="lp-foot-tag">Explainable recommendation infrastructure.</p>
-        <p className="lp-foot-copy">© 2026 GlassBox Engine</p>
-      </footer>
-
-      <style>{LP_CSS}</style>
-    </div>
-  );
-}
-
-const LP_CSS = `
 .lp {
   --lp-indigo: #7b78ff;
   --lp-cyan: #38d6e0;
@@ -609,10 +227,112 @@ const LP_CSS = `
 .lp-final-h { position: relative; font-family: var(--lp-display), serif; font-weight: 400; font-size: clamp(36px,6vw,68px); line-height: 1.05; margin: 0 auto; max-width: 14em; }
 .lp-final .lp-sub { margin: 22px auto 0; }
 
-/* ── footer ── */
+/* ── legacy single-row footer (kept for compatibility) ── */
 .lp-footer { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 30px clamp(20px,5vw,64px); border-top: 1px solid var(--lp-line); color: var(--lp-faint); font-size: 13px; }
 .lp-foot-tag { margin-left: 8px; color: var(--lp-dim); }
 .lp-foot-copy { margin-left: auto; }
+
+/* =================================================================
+   Shared multi-column site footer
+   ================================================================= */
+.lp-sitefooter { border-top: 1px solid var(--lp-line); background: #060608; }
+.lp-sitefooter-top {
+  display: grid; grid-template-columns: 1.1fr 2fr; gap: 48px;
+  max-width: 1180px; margin: 0 auto; padding: clamp(48px,6vw,72px) clamp(20px,5vw,64px) 40px;
+}
+.lp-sitefooter-brand .lp-brand { margin-bottom: 16px; }
+.lp-sitefooter-tag { color: var(--lp-dim); font-size: 14px; line-height: 1.6; max-width: 30ch; margin: 0 0 16px; }
+.lp-sitefooter-mail { color: var(--lp-indigo); font-size: 14px; transition: color 0.2s; }
+.lp-sitefooter-mail:hover { color: var(--lp-cyan); }
+.lp-sitefooter-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+.lp-sitefooter-coltitle { font-family: var(--lp-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--lp-faint); margin: 0 0 14px; }
+.lp-sitefooter-col ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.lp-sitefooter-col a { color: var(--lp-dim); font-size: 14px; transition: color 0.2s; }
+.lp-sitefooter-col a:hover { color: var(--lp-ink); }
+.lp-sitefooter-bottom {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  max-width: 1180px; margin: 0 auto; padding: 22px clamp(20px,5vw,64px);
+  border-top: 1px solid var(--lp-line); color: var(--lp-faint); font-size: 13px;
+}
+.lp-sitefooter-built a { color: var(--lp-dim); border-bottom: 1px solid var(--lp-line); transition: color 0.2s, border-color 0.2s; }
+.lp-sitefooter-built a:hover { color: var(--lp-indigo); border-color: var(--lp-indigo); }
+
+/* =================================================================
+   Inner SEO/content pages (block-rendered via MarketingPageView)
+   ================================================================= */
+.lp-page { max-width: 1100px; margin: 0 auto; padding: 0 clamp(20px,5vw,64px); }
+
+.lp-crumbs { padding-top: 28px; }
+.lp-crumbs ol { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; font-family: var(--lp-mono), monospace; font-size: 12px; letter-spacing: 0.04em; color: var(--lp-faint); }
+.lp-crumbs a { color: var(--lp-dim); transition: color 0.2s; }
+.lp-crumbs a:hover { color: var(--lp-ink); }
+.lp-crumbs [aria-current="page"] { color: var(--lp-dim); }
+.lp-crumb-sep { margin-left: 8px; color: var(--lp-line); }
+
+.lp-pagehero { position: relative; padding: clamp(36px,6vw,72px) 0 clamp(28px,4vw,44px); }
+.lp-pagehero-glow { position: absolute; z-index: 0; pointer-events: none; top: -120px; left: -80px; width: 620px; height: 620px; background: radial-gradient(circle at 40% 40%, rgba(123,120,255,0.16), rgba(56,214,224,0.06) 40%, transparent 64%); filter: blur(18px); }
+.lp-pagehero > *:not(.lp-pagehero-glow) { position: relative; z-index: 1; }
+.lp-pagehero-h1 { font-family: var(--lp-display), Georgia, serif; font-weight: 400; line-height: 1.04; letter-spacing: -0.01em; font-size: clamp(38px,5.5vw,66px); margin: 18px 0 0; max-width: 18ch; }
+.lp-pagehero-sub { margin: 22px 0 0; max-width: 56ch; font-size: clamp(16px,1.3vw,18px); line-height: 1.62; color: var(--lp-dim); }
+.lp-pagehero .lp-cta-row { margin-top: 30px; }
+
+.lp-blocks { display: flex; flex-direction: column; gap: clamp(48px,7vw,84px); padding: clamp(40px,6vw,72px) 0 clamp(72px,9vw,120px); }
+.lp-block { scroll-margin-top: 90px; }
+.lp-block .lp-h2 { margin: 0 0 8px; }
+.lp-block-intro { color: var(--lp-dim); font-size: clamp(15px,1.2vw,17px); line-height: 1.62; max-width: 60ch; margin: 14px 0 0; }
+
+/* prose */
+.lp-prose p { color: var(--lp-dim); font-size: 16px; line-height: 1.72; max-width: 68ch; margin: 16px 0 0; }
+.lp-prose p:first-of-type { margin-top: 18px; }
+
+/* feature grid */
+.lp-fgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 30px; }
+.lp-fcard { position: relative; padding: 26px; border-radius: 16px; border: 1px solid var(--lp-line); background: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0)); overflow: hidden; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.3s; }
+.lp-fcard::before { content: ""; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background: var(--c); opacity: 0.75; box-shadow: 0 0 20px 0 var(--c); }
+.lp-fcard:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--c) 40%, var(--lp-line)); }
+.lp-fcard-title { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.lp-fcard-body { color: var(--lp-dim); line-height: 1.62; font-size: 14.5px; margin: 10px 0 0; }
+
+/* steps */
+.lp-stepsblock { list-style: none; padding: 0; margin: 30px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; counter-reset: step; }
+.lp-stepblock { position: relative; }
+.lp-stepblock-no { font-family: var(--lp-mono), monospace; font-size: 13px; color: var(--lp-indigo); }
+.lp-stepblock h3 { font-family: var(--lp-display), serif; font-weight: 400; font-size: 24px; margin: 10px 0 8px; }
+.lp-stepblock p { color: var(--lp-dim); line-height: 1.6; font-size: 14.5px; }
+
+/* comparison table */
+.lp-tablewrap { margin-top: 28px; overflow-x: auto; border: 1px solid var(--lp-line); border-radius: 16px; }
+.lp-ctable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
+.lp-ctable th, .lp-ctable td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--lp-line); vertical-align: top; }
+.lp-ctable thead th { font-family: var(--lp-mono), monospace; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lp-faint); background: rgba(255,255,255,0.015); white-space: nowrap; }
+.lp-ctable tbody th[scope="row"] { color: var(--lp-ink); font-weight: 500; }
+.lp-ctable td { color: var(--lp-dim); }
+.lp-ctable .lp-ctable-own { background: rgba(123,120,255,0.06); color: var(--lp-ink); }
+.lp-ctable thead .lp-ctable-own { color: var(--lp-indigo); }
+.lp-ctable tbody tr:last-child th, .lp-ctable tbody tr:last-child td { border-bottom: none; }
+.lp-cell-pos { color: var(--lp-emerald); font-weight: 500; }
+.lp-cell-neg { color: var(--lp-faint); }
+
+/* faq */
+.lp-faqlist { margin-top: 26px; border-top: 1px solid var(--lp-line); }
+.lp-faqitem { border-bottom: 1px solid var(--lp-line); }
+.lp-faqitem summary { cursor: pointer; list-style: none; padding: 18px 0; font-size: 16px; font-weight: 500; color: var(--lp-ink); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.lp-faqitem summary::-webkit-details-marker { display: none; }
+.lp-faqitem summary::after { content: "+"; color: var(--lp-indigo); font-size: 20px; line-height: 1; transition: transform 0.2s; }
+.lp-faqitem[open] summary::after { transform: rotate(45deg); }
+.lp-faqitem p { color: var(--lp-dim); line-height: 1.66; font-size: 15px; padding: 0 0 20px; max-width: 70ch; margin: 0; }
+
+/* callout */
+.lp-callout { position: relative; padding: 28px 30px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--c) 30%, var(--lp-line)); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, transparent), transparent); overflow: hidden; }
+.lp-callout::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); box-shadow: 0 0 22px 0 var(--c); }
+.lp-callout-title { font-size: 18px; font-weight: 600; margin: 0; }
+.lp-callout-body { color: var(--lp-dim); line-height: 1.64; font-size: 15px; margin: 10px 0 0; max-width: 64ch; }
+
+/* cta block */
+.lp-ctablock { text-align: center; padding: clamp(40px,6vw,64px) clamp(20px,4vw,48px); border: 1px solid var(--lp-line); border-radius: 20px; background: radial-gradient(80% 140% at 50% 0%, rgba(123,120,255,0.10), transparent 62%); }
+.lp-ctablock .lp-h2 { margin: 0 auto; max-width: 18ch; }
+.lp-ctablock .lp-block-intro { margin: 16px auto 0; }
+.lp-ctablock .lp-cta-row { justify-content: center; margin-top: 28px; }
 
 /* ── responsive ── */
 @media (max-width: 900px) {
@@ -625,8 +345,11 @@ const LP_CSS = `
   .lp-shift { grid-template-columns: 1fr; }
   .lp-shift-arrow { transform: rotate(90deg); }
   .lp-navlinks { display: none; }
+  .lp-fgrid { grid-template-columns: 1fr; }
+  .lp-stepsblock { grid-template-columns: 1fr; gap: 24px; }
+  .lp-sitefooter-top { grid-template-columns: 1fr; gap: 32px; }
+  .lp-sitefooter-cols { grid-template-columns: repeat(2, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   .lp-rise, .lp-glassbox, .lp-tracecard, .lp-spectrum span, .lp-dot { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
-`;

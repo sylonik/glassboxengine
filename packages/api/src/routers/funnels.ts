@@ -249,7 +249,7 @@ export const funnelsRouter = createTRPCRouter({
             SELECT
                 session_id,
                 windowFunnel(${input.days * 86400})(
-                    created_at,
+                    toDateTime(created_at),
                     ${conditions.join(",\n                    ")}
                 ) AS level
             FROM glassbox.website_events

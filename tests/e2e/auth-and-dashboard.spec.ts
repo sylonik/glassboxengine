@@ -4,9 +4,11 @@ function uniqueEmail() {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 }
 
-test("redirects unauthenticated users to sign in", async ({ page }) => {
+test("redirects unauthenticated users to sign in, preserving the destination", async ({ page }) => {
   await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/sign-in$/);
+  // The proxy preserves the intended destination as ?redirectTo so the user
+  // lands where they were going after signing in.
+  await expect(page).toHaveURL(/\/sign-in\?redirectTo=%2Fdashboard$/);
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
 });
 

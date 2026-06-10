@@ -2,6 +2,27 @@
 
 An AI-powered recommendation engine with explainable AI. GlassBox provides personalized product feeds while maintaining full transparency about how recommendations are ranked through reasoning chains, confidence scores, and audit trails.
 
+> **Live:** [glassboxengine.dev](https://glassboxengine.dev) · **Demo store:** [demo.glassboxengine.dev](https://demo.glassboxengine.dev) · **API reference:** [glassboxengine.dev/docs](https://glassboxengine.dev/docs)
+
+Built with **Google's Agent Development Kit (ADK)** and **Gemini**, GlassBox makes
+personalization transparent, testable, and aligned with business goals across four
+value pillars:
+
+| Pillar | Feature | What it does |
+|---|---|---|
+| 🟦 **Explainability** | Glass Box reasoning traces | Every recommendation ships a faithful decision trace — only what the ranking math actually did, never a prompt-spun story. |
+| 🟩 **Logic Drift** | Intent Sliders + Architect Agent | Describe a business goal in plain language; the **ADK Architect agent** proposes a transparent reward-function config. Pin a feed, drag sliders, and see exactly what moved. |
+| 🟪 **Cold Start** | Persona Lab | Generate synthetic personas, simulate their behaviour, and A/B two strategies across every segment before shipping. |
+| 🟨 **Education** | Socratic Mentor | Commit a scoring function and an **ADK Mentor agent** reviews it like a senior engineer — a multi-turn Socratic dialogue, never the fixed code. |
+
+### The four pillars, live in production
+
+| Logic Drift — Intent Sliders | Explainability — Glass Box traces |
+|---|---|
+| ![Alignment Studio](docs/images/logic-drift-sliders/06-public-alignment-feed.png) | ![Glass Box](docs/images/explainability-reasoning-traces/06-public-glass-box.png) |
+| **Cold Start — Persona Lab** | **Education — Socratic Mentor** |
+| ![Persona Lab](docs/images/cold-start-personas/06-public-personas.png) | ![Socratic Mentor](docs/images/education-mentor/06-public-editor.png) |
+
 ## Architecture
 
 GlassBox uses a **hybrid** runtime: the deterministic ranking core and all app services
@@ -12,24 +33,66 @@ runtime SA); for local dev it can target an `adk api_server`
 (`GLASSBOX_AGENT_SERVICE_URL`). Both paths keep an in-process `@google/genai` fallback
 so the product never dead-ends if the agent service is unavailable.
 
+```mermaid
+flowchart LR
+    subgraph client["Clients"]
+        DS["Demo storefront<br/>tracker + feed rail"]
+        SDK["@glassbox/sdk<br/>integrators"]
+    end
+
+    subgraph cr["Cloud Run — TypeScript"]
+        WEB["Next.js + tRPC API<br/>dashboard + public /api"]
+        CORE["Deterministic ranking core<br/>pgvector retrieval + weighted scoring"]
+        WORKERS["BullMQ workers<br/>event ingest"]
+    end
+
+    subgraph ae["Vertex AI Agent Engine — Python ADK"]
+        COORD["Coordinator (root)"]
+        COORD --> REA["Reasoner"]
+        COORD --> MEN["Mentor + Mentor-chat"]
+        COORD --> PER["Persona simulator"]
+        COORD --> ARC["Architect pipeline<br/>SequentialAgent + tool"]
+    end
+
+    subgraph data["Data"]
+        PG[("Cloud SQL<br/>Postgres + pgvector")]
+        CH[("ClickHouse<br/>events")]
+        RD[("Redis")]
+    end
+
+    DS --> WEB
+    SDK -->|"Bearer API key"| WEB
+    WEB --> CORE --> PG
+    WEB -->|"GLASSBOX_AGENT_ENGINE · ADC auth"| COORD
+    WEB -.->|"in-process Gemini fallback"| GENAI["@google/genai"]
+    WORKERS --> CH
+    WEB --> RD
+    WEB --> CH
+```
+
+The LLM agents **reason about** the recommendation; the deterministic core **decides**
+it — so every score stays reproducible and auditable.
+
 ```
 apps/web                 Next.js 16 frontend + tRPC API handler
 packages/api             tRPC routers (business logic)
-packages/agents          TS agents: deterministic ranking core (Architect/scoring/embeddings)
-                         + Reasoner/Mentor/Persona, and the Python-agent-service client
+packages/agents          TS agents: deterministic ranking core + the Architect advisor,
+                         Reasoner/Mentor/Persona, and the Agent Engine client
 packages/database        PostgreSQL schema (Drizzle ORM + pgvector)
 packages/event-pipeline  BullMQ job queue + ClickHouse event store
 packages/telemetry       OpenTelemetry instrumentation (traces, metrics, logging)
 packages/sdk             Client SDK for consuming applications
 packages/config          Shared TypeScript and ESLint configs
-services/glassbox-agents Python ADK reasoning agents (Coordinator → Reasoner/Mentor/Persona)
-                         → deploys to Vertex AI Agent Engine
+apps/demo-store          Storefront that emits events and renders the engine's feed rail
+services/glassbox-agents Python ADK agents (Coordinator → Reasoner/Mentor/Mentor-chat/
+                         Persona/Architect) → deploys to Vertex AI Agent Engine
 infra/terraform          GCP IaC: Cloud Run, Cloud SQL (pgvector), Memorystore, Secret Manager
 ```
 
 The four value pillars and their verified screenshots are documented in
 [docs/feature-status.md](docs/feature-status.md). Deployment is covered in
-[docs/deployment-runbook.md](docs/deployment-runbook.md).
+[docs/deployment-runbook.md](docs/deployment-runbook.md). A sub-3-minute walkthrough
+script for the demo video is in [docs/demo-script.md](docs/demo-script.md).
 
 ## Prerequisites
 

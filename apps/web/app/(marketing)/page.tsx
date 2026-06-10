@@ -360,6 +360,33 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Demo video ──────────────────────────────────── */}
+      <section className="lp-section lp-demo-video">
+        <div className="lp-section-head">
+          <p className="lp-eyebrow">
+            <span className="lp-dot" /> See it in action
+          </p>
+          <h2 className="lp-h2">
+            The full walkthrough,{" "}
+            <span className="lp-display-italic">two minutes.</span>
+          </h2>
+          <p className="lp-sub" style={{ maxWidth: "52ch", margin: "0 auto" }}>
+            From connecting your catalog to reading a live reasoning trace — the complete GlassBox workflow.
+          </p>
+        </div>
+        <div className="lp-video-wrap">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            className="lp-video"
+            src="/videos/glassbox-demo.mp4"
+            controls
+            preload="none"
+            poster="/screenshots/mobile-preview.png"
+            playsInline
+          />
+        </div>
+      </section>
+
       {/* ── Final CTA ───────────────────────────────────── */}
       <section className="lp-final">
         <div className="lp-final-glow" aria-hidden />

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { and, eq, desc } from "drizzle-orm";
-import { createTRPCRouter, protectedProcedure } from "./trpc";
-import { scoringFunctions } from "@glassbox/database/schema";
+import { createTRPCRouter, protectedProcedure, apiKeyProcedure } from "./trpc";
+import { scoringFunctions, intentProfiles } from "@glassbox/database/schema";
 import { ensureProject, resolveProject } from "../project_utils";
 
 export const scoringRouter = createTRPCRouter({
@@ -147,6 +147,70 @@ export const scoringRouter = createTRPCRouter({
         blocked: false,
         dialogue: review.dialogue,
         function: result[0],
+      };
+    }),
+
+  /**
+   * API-key-authenticated scoring config retrieval for MCP / external agents.
+   * Returns the committed scoring function (if any) and the active intent profile
+   * sliders for the project that owns the API key.
+   */
+  sdkGetConfig: apiKeyProcedure
+    .input(z.object({}).optional())
+    .query(async ({ ctx }) => {
+      // Committed scoring function (most recently updated)
+      const [scoringFn] = await ctx.db
+        .select({
+          id: scoringFunctions.id,
+          name: scoringFunctions.name,
+          description: scoringFunctions.description,
+          code: scoringFunctions.code,
+          version: scoringFunctions.version,
+          isCommitted: scoringFunctions.isCommitted,
+          updatedAt: scoringFunctions.updatedAt,
+        })
+        .from(scoringFunctions)
+        .where(
+          and(
+            eq(scoringFunctions.userId, ctx.userId),
+            eq(scoringFunctions.projectId, ctx.projectId),
+            eq(scoringFunctions.isCommitted, true)
+          )
+        )
+        .orderBy(desc(scoringFunctions.updatedAt))
+        .limit(1);
+
+      // Active intent profile (slider defaults)
+      const [activeProfile] = await ctx.db
+        .select({
+          id: intentProfiles.id,
+          name: intentProfiles.name,
+          sliders: intentProfiles.sliders,
+          isActive: intentProfiles.isActive,
+          updatedAt: intentProfiles.updatedAt,
+        })
+        .from(intentProfiles)
+        .where(
+          and(
+            eq(intentProfiles.userId, ctx.userId),
+            eq(intentProfiles.projectId, ctx.projectId),
+            eq(intentProfiles.isActive, true)
+          )
+        )
+        .limit(1);
+
+      const defaultSliders = {
+        relevance: 0.5,
+        diversity: 0.5,
+        novelty: 0.5,
+        popularity: 0.5,
+      };
+
+      return {
+        projectId: ctx.projectId,
+        scoringFunction: scoringFn ?? null,
+        activeIntentProfile: activeProfile ?? null,
+        defaultSliders: (activeProfile?.sliders as typeof defaultSliders | null) ?? defaultSliders,
       };
     }),
 

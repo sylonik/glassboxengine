@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { and, eq, desc, sql, asc } from "drizzle-orm";
 import { cosineDistance } from "drizzle-orm";
-import { createTRPCRouter, protectedProcedure, rateLimitedProcedure } from "./trpc";
+import { createTRPCRouter, protectedProcedure, rateLimitedProcedure, apiKeyProcedure } from "./trpc";
 import { catalogSources, products, projects } from "@glassbox/database/schema";
 import { ensureProject, resolveProject } from "../project_utils";
 import {
@@ -431,6 +431,45 @@ export const catalogRouter = createTRPCRouter({
 
     return result.map((r) => r.category).filter(Boolean) as string[];
   }),
+
+  /**
+   * API-key-authenticated catalog listing for MCP / external agents.
+   * Returns products scoped to the project that owns the API key.
+   */
+  sdkList: apiKeyProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+        category: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: ReturnType<typeof eq>[] = [
+        eq(products.projectId, ctx.projectId),
+        eq(products.userId, ctx.userId),
+      ];
+
+      if (input.category) {
+        conditions.push(eq(products.category, input.category));
+      }
+
+      const rows = await ctx.db
+        .select({
+          id: products.id,
+          externalId: products.externalId,
+          name: products.name,
+          description: products.description,
+          category: products.category,
+          metadata: products.metadata,
+          createdAt: products.createdAt,
+        })
+        .from(products)
+        .where(and(...conditions))
+        .orderBy(desc(products.createdAt))
+        .limit(input.limit);
+
+      return { items: rows, total: rows.length };
+    }),
 
   /** Generate embeddings for products using the Engineer Agent */
   generateEmbeddings: rateLimitedProcedure

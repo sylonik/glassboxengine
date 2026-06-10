@@ -49,9 +49,13 @@ flowchart LR
     subgraph ae["Vertex AI Agent Engine — Python ADK"]
         COORD["Coordinator (root)"]
         COORD --> REA["Reasoner"]
-        COORD --> MEN["Mentor + Mentor-chat"]
-        COORD --> PER["Persona simulator"]
-        COORD --> ARC["Architect pipeline<br/>SequentialAgent + tool"]
+        COORD --> MEN["Mentor + Tutor"]
+        COORD --> PER["Persona simulator<br/>SequentialAgent + MCP tools"]
+        COORD --> ARC["Architect pipeline<br/>SequentialAgent + MCP tools"]
+    end
+
+    subgraph mcp["MCP bridge"]
+        MCPSRV["POST /api/mcp<br/>Streamable HTTP · stateless"]
     end
 
     subgraph data["Data"]
@@ -65,6 +69,8 @@ flowchart LR
     WEB --> CORE --> PG
     WEB -->|"GLASSBOX_AGENT_ENGINE · ADC auth"| COORD
     WEB -.->|"in-process Gemini fallback"| GENAI["@google/genai"]
+    WEB --> MCPSRV
+    ae -->|"McpToolset · Bearer API key"| MCPSRV
     WORKERS --> CH
     WEB --> RD
     WEB --> CH
@@ -93,6 +99,26 @@ The four value pillars and their verified screenshots are documented in
 [docs/feature-status.md](docs/feature-status.md). Deployment is covered in
 [docs/deployment-runbook.md](docs/deployment-runbook.md). A sub-3-minute walkthrough
 script for the demo video is in [docs/demo-script.md](docs/demo-script.md).
+
+## MCP (Model Context Protocol) integration
+
+The Python ADK agents on Vertex AI Agent Engine connect back to the TypeScript platform via a **Streamable HTTP MCP server** at `POST /api/mcp`. The same project API key (`gb_live_...`) that authenticates the public SDK endpoints authenticates every MCP call; all data is scoped to the resolved project.
+
+**Five tools are exposed:**
+
+| Tool | What it does |
+|---|---|
+| `get_feed` | Ranked recommendations (wraps `glassBox.recommend`) |
+| `get_catalog` | Project product catalog |
+| `get_scoring_config` | Active scoring function + slider defaults |
+| `track_events` | Write interaction events to the feedback pipeline |
+| `translate_sliders` | Pure deterministic math: slider values → retrieval parameters |
+
+The **Persona Simulator** agent uses `get_catalog`, `get_feed`, and `track_events` to ground cold-start simulations in live data. The **Architect** agent uses `get_scoring_config` and `get_feed` alongside the local `translate_slider_config` tool to anchor slider proposals in real platform state.
+
+Any third-party MCP client (Claude Desktop, MCP Inspector, custom agent) can also connect by pointing at `https://glassboxengine.dev/api/mcp` with a project API key.
+
+Full details — architecture diagram, per-tool input/output reference, auth model, env vars, connection snippets, and the `output_schema`/tools split design note — are in **[docs/mcp-integration.md](docs/mcp-integration.md)**.
 
 ## Prerequisites
 
@@ -136,6 +162,8 @@ For the first production-like run, open `Catalog Studio` after sign-in and eithe
 | `GOOGLE_API_KEY` | Gemini API key for agents | Yes |
 | `GLASSBOX_AGENT_ENGINE` | Vertex AI Agent Engine resource name (`projects/<p>/locations/<l>/reasoningEngines/<id>`); routes agent calls to the Python ADK agents via ADC (prod path) | No (in-process fallback) |
 | `GLASSBOX_AGENT_SERVICE_URL` | Local `adk api_server` URL for the Python agents (dev alternative) | No |
+| `GLASSBOX_MCP_URL` | MCP server URL exposed to the Python ADK agents, e.g. `https://glassboxengine.dev/api/mcp` (agent side) | No (MCP disabled when unset) |
+| `GLASSBOX_MCP_API_KEY` | Project API key sent as `Bearer` token by ADK agents to the MCP server (agent side) | No (MCP disabled when unset) |
 | `NEXT_PUBLIC_APP_URL` | Frontend URL | Yes |
 | `REDIS_URL` | Redis URL for BullMQ | Yes |
 | `CLICKHOUSE_URL` | ClickHouse HTTP URL | Yes |

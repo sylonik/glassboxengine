@@ -11,13 +11,74 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Deterministic tools for the GlassBox agents.
+"""Deterministic tools and MCP toolset builder for the GlassBox agents.
 
 `translate_slider_config` is the EXACT production slider->retrieval translation
 (ported from packages/agents/src/sql-builder.ts). The Architect agent must call
 it so every proposal it makes reflects what the deterministic TS ranking core
 will actually execute — the agent reasons, the glass-box math decides.
+
+`build_glassbox_mcp_toolset` connects agents to the live Glassbox platform via
+Streamable-HTTP MCP. It reads two env vars:
+  GLASSBOX_MCP_URL     — the MCP server base URL, e.g. https://glassboxengine.dev/api/mcp
+  GLASSBOX_MCP_API_KEY — the Bearer token for the Authorization header
+If either var is unset the function returns None, allowing local tests and the
+ADK playground to work without a live MCP connection (graceful degradation).
 """
+
+import logging
+import os
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+def build_glassbox_mcp_toolset(
+    tool_filter: list[str],
+) -> Optional[object]:
+    """Return an McpToolset connected to the Glassbox platform, or None.
+
+    Reads env vars at call time:
+      GLASSBOX_MCP_URL     — base URL of the Streamable-HTTP MCP server
+      GLASSBOX_MCP_API_KEY — Bearer token sent as "Authorization: Bearer <key>"
+
+    Returns None (and logs a debug warning) when either var is unset so that
+    local tests, the ADK playground, and CI runs without live infra still work.
+
+    Args:
+        tool_filter: List of MCP tool names to expose to the agent. Each agent
+            should pass only the tools it actually needs so the model's context
+            stays small and the surface for mistakes is minimised.
+
+    Returns:
+        A configured McpToolset if both env vars are present, else None.
+    """
+    url = os.environ.get("GLASSBOX_MCP_URL")
+    key = os.environ.get("GLASSBOX_MCP_API_KEY")
+
+    if not url or not key:
+        logger.debug(
+            "GLASSBOX_MCP_URL or GLASSBOX_MCP_API_KEY not set — "
+            "skipping MCP toolset construction (graceful degradation)."
+        )
+        return None
+
+    # Import lazily so the module can be imported in environments where the MCP
+    # extras are not installed (they ARE present in the deployed venv, but
+    # keeping the import local avoids surprising failures at module load time).
+    from google.adk.tools.mcp_tool import McpToolset  # noqa: PLC0415
+    from google.adk.tools.mcp_tool.mcp_session_manager import (  # noqa: PLC0415
+        StreamableHTTPConnectionParams,
+    )
+
+    connection_params = StreamableHTTPConnectionParams(
+        url=url,
+        headers={"Authorization": f"Bearer {key}"},
+    )
+    return McpToolset(
+        connection_params=connection_params,
+        tool_filter=tool_filter,
+    )
 
 
 def _clamp(value: float) -> float:

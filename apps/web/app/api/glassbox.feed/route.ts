@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { appRouter } from "@glassbox/api";
 import { db } from "@glassbox/database/client";
+import { getRedis } from "~/lib/redis";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
   try {
     const caller = appRouter.createCaller({
       db,
+      redis: getRedis(),
       user: null,
       authHeader: req.headers.get("authorization"),
     });

@@ -11,6 +11,7 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "/features/intent-alignment", priority: 0.8, changeFrequency: "monthly" },
   { path: "/features/socratic-mentor", priority: 0.7, changeFrequency: "monthly" },
   { path: "/use-cases", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/docs", priority: 0.8, changeFrequency: "monthly" },
   { path: "/pricing", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
   { path: "/about", priority: 0.5, changeFrequency: "yearly" },

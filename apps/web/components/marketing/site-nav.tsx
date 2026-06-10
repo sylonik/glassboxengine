@@ -4,6 +4,7 @@ const NAV_LINKS = [
   { label: "Features", href: "/features" },
   { label: "Compare", href: "/compare" },
   { label: "Use cases", href: "/use-cases" },
+  { label: "Docs", href: "/docs" },
   { label: "Pricing", href: "/pricing" },
 ];
 

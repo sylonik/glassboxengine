@@ -24,6 +24,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Resources",
     links: [
       { label: "Live demo", href: "/dashboard" },
+      { label: "API docs", href: "/docs" },
       { label: "FAQ", href: "/faq" },
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },

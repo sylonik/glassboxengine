@@ -2,12 +2,5 @@
   "remote_agent_runtime_id": "projects/573736938351/locations/us-east1/reasoningEngines/617732020763623424",
   "deployment_target": "agent_runtime",
   "is_a2a": false,
-  "deployment_timestamp": "2026-06-10T14:09:20.911489",
-  "pending_operation": {
-    "operation_name": "projects/573736938351/locations/us-east1/reasoningEngines/617732020763623424/operations/9123068332696666112",
-    "project": "glassbox-engine",
-    "location": "us-east1",
-    "deployment_target": "agent_runtime",
-    "started_at": "2026-06-10T12:17:04.163998+00:00"
-  }
+  "deployment_timestamp": "2026-06-10T14:21:36.048687"
 }

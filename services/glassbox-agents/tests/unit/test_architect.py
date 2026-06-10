@@ -67,7 +67,7 @@ def test_coordinator_routes_to_all_specialists() -> None:
     assert names == {
         "reasoner_agent",
         "mentor_agent",
-        "mentor_chat_agent",
+        "tutor_agent",
         "persona_simulator_agent",
         "architect_pipeline",
     }

@@ -1,6 +1,6 @@
 """Smoke-test the deployed GlassBox Agent Engine for the new routes.
 
-Verifies task="architect" (Logic Drift) and task="mentor_chat" (Education)
+Verifies task="architect" (Logic Drift) and task="tutor" (Education)
 return schema-valid JSON, plus a baseline task="mentor". Run with ADC:
     python smoke_test_routes.py
 """
@@ -49,8 +49,8 @@ CASES = {
             ],
         },
     },
-    "mentor_chat": {
-        "task": "mentor_chat",
+    "tutor": {
+        "task": "tutor",
         "code": "function score(ctx){ return ctx.similarity / ctx.maxViews; }",
         "transcript": [
             "I reviewed this scorer and found issues we should fix before committing:",
@@ -67,7 +67,7 @@ CASES = {
 
 EXPECTED_KEYS = {
     "architect": {"profileName", "sliders", "rationale"},
-    "mentor_chat": {"reply", "readyToCommit"},
+    "tutor": {"reply", "readyToCommit"},
     "mentor": {"isValid", "issues", "dialogue"},
 }
 
@@ -83,7 +83,7 @@ for name, payload in CASES.items():
         print(f"  {'PASS' if ok else 'FAIL'} — keys present: {sorted(parsed.keys())[:6]}")
         if name == "architect" and ok:
             print(f"  proposed sliders: {parsed.get('sliders')}")
-        if name == "mentor_chat" and ok:
+        if name == "tutor" and ok:
             print(f"  readyToCommit: {parsed.get('readyToCommit')}")
     except Exception as exc:  # noqa: BLE001
         print(f"  ERROR: {type(exc).__name__}: {exc}")

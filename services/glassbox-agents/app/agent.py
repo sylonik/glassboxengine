@@ -20,7 +20,8 @@ from app.glassbox.agents import build_coordinator
 # GlassBox multi-agent system: a Coordinator root agent (no output_schema) routes
 # by a JSON `task` field to four specialized sub-agents:
 #   task "reason"    -> reasoner_agent           (Explainability)
-#   task "mentor"    -> mentor_agent             (Education)
+#   task "mentor"    -> mentor_agent             (Education: review fresh code)
+#   task "tutor"     -> tutor_agent              (Education: dialogue follow-up)
 #   task "simulate"  -> persona_simulator_agent  (Cold Start)
 #   task "architect" -> architect_pipeline       (Logic Drift / goal alignment)
 # Leaves carry a Pydantic output_schema for structured JSON output. The architect

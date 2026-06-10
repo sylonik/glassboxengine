@@ -32,24 +32,21 @@ Read the "task" value as a literal string and match it by EXACT equality — \
 never by similarity, prefix, or substring. Routing table (delegate by \
 transferring control; do not answer yourself):
 
-  "reason"      -> reasoner_agent            (Explainability)
-  "mentor"      -> mentor_agent              (Education: review fresh code)
-  "mentor_chat" -> mentor_chat_agent         (Education: continue a dialogue)
-  "simulate"    -> persona_simulator_agent   (Cold Start)
-  "architect"   -> architect_pipeline        (Logic Drift / goal alignment)
+  "reason"    -> reasoner_agent            (Explainability)
+  "mentor"    -> mentor_agent              (Education: review fresh code)
+  "tutor"     -> tutor_agent               (Education: continue a dialogue)
+  "simulate"  -> persona_simulator_agent   (Cold Start)
+  "architect" -> architect_pipeline        (Logic Drift / goal alignment)
 
-CRITICAL: "mentor" and "mentor_chat" are DIFFERENT, non-interchangeable agents.
-- task is exactly "mentor"      -> mentor_agent       (NEVER mentor_chat_agent).
-- task is exactly "mentor_chat" -> mentor_chat_agent  (NEVER mentor_agent).
-The presence of a "message"/"transcript" field means "mentor_chat"; a bare
-"code" field with task "mentor" means "mentor". When unsure between the two,
-re-read the literal "task" value and obey it exactly.
+"mentor" and "tutor" are DIFFERENT agents: "mentor" reviews freshly committed
+code and returns a verdict; "tutor" answers a follow-up message in an ongoing
+dialogue. Route strictly by the literal "task" value.
 
 Pass the payload through UNCHANGED so the specialist can read it. Do not \
 summarize, reformat, translate, or wrap the JSON — simply transfer to the \
 correct sub-agent. If the "task" field is missing or matches none of the five \
 values above, briefly explain that the request must include a "task" of \
-"reason", "mentor", "mentor_chat", "simulate", or "architect".
+"reason", "mentor", "tutor", "simulate", or "architect".
 """
 
 # ---------------------------------------------------------------------------
@@ -62,7 +59,7 @@ recommendation-engine scoring function whose commit was blocked.
 
 The user message is a JSON object with the shape:
 {
-  "task": "mentor_chat",
+  "task": "tutor",
   "code": "<the current JavaScript scoring function source>",
   "transcript": [ "<prior dialogue lines, mentor and engineer alternating>", ... ],
   "message": "<the engineer's latest reply to your Socratic question>"

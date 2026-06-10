@@ -87,18 +87,23 @@ def build_mentor() -> Agent:
     )
 
 
-def build_mentor_chat() -> Agent:
-    """Mentor chat agent (Education): one Socratic dialogue turn after a block."""
+def build_tutor() -> Agent:
+    """Tutor agent (Education): one Socratic dialogue turn after a blocked commit.
+
+    Named distinctly from the reviewer (`mentor_agent`) so the Coordinator never
+    confuses the `mentor` (fresh review) and `tutor` (dialogue) tasks.
+    """
     return Agent(
-        name="mentor_chat_agent",
+        name="tutor_agent",
         model=_build_model(),
         description=(
-            "Continues the Socratic dialogue about a blocked scoring-function commit: "
-            "evaluates the engineer's reply, deepens understanding, never writes the fix."
+            "Answers a follow-up message in an ongoing dialogue about a blocked "
+            "scoring-function commit: evaluates the engineer's reply, deepens "
+            "understanding, never writes the fix. Does not review fresh code."
         ),
         instruction=MENTOR_CHAT_INSTRUCTION,
         output_schema=MentorChatOutput,
-        output_key="mentor_chat_result",
+        output_key="tutor_result",
     )
 
 
@@ -165,7 +170,7 @@ def build_coordinator() -> Agent:
     """
     reasoner = build_reasoner()
     mentor = build_mentor()
-    mentor_chat = build_mentor_chat()
+    tutor = build_tutor()
     persona_simulator = build_persona()
     architect = build_architect()
 
@@ -174,9 +179,10 @@ def build_coordinator() -> Agent:
         model=_build_model(),
         description=(
             "Routes GlassBox reasoning tasks to the Reasoner (explainability), Mentor "
-            "(education, review + dialogue turns), Persona Simulator (cold start), or "
-            "Architect (goal alignment) based on a JSON `task` field."
+            "(education: review fresh code), Tutor (education: dialogue follow-up), "
+            "Persona Simulator (cold start), or Architect (goal alignment) based on a "
+            "JSON `task` field."
         ),
         instruction=COORDINATOR_INSTRUCTION,
-        sub_agents=[reasoner, mentor, mentor_chat, persona_simulator, architect],
+        sub_agents=[reasoner, mentor, tutor, persona_simulator, architect],
     )

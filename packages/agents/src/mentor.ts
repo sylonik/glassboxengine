@@ -37,7 +37,7 @@ export async function runMentorAgent(code: string): Promise<MentorResult> {
         code,
       });
       // Guard against a Coordinator routing slip (e.g. "mentor" mis-delegated
-      // to the mentor_chat agent): if the shape isn't a review, throw so we
+      // to the tutor agent): if the shape isn't a review, throw so we
       // fall back to in-process validation rather than silently blocking.
       if (typeof remote.isValid !== "boolean") {
         throw new Error("Agent service returned a non-review mentor payload");
@@ -112,8 +112,8 @@ export interface MentorDialogueTurn {
  * Mentor's question, the Mentor evaluates the reasoning and either deepens the
  * dialogue or signals they are ready to fix and re-commit.
  *
- * HYBRID: runs on the Python ADK mentor_chat agent (Vertex AI Agent Engine)
- * when configured, with an in-process Gemini fallback.
+ * HYBRID: runs on the Python ADK tutor agent (Vertex AI Agent Engine) when
+ * configured, with an in-process Gemini fallback.
  */
 export async function runMentorDialogue(
   code: string,
@@ -122,12 +122,13 @@ export async function runMentorDialogue(
 ): Promise<MentorDialogueTurn> {
   if (isAgentServiceEnabled()) {
     try {
-      const remote = await callGlassboxAgent<MentorDialogueTurn>(
-        "mentor_chat",
-        { code, transcript, message }
-      );
-      // Guard against a Coordinator routing slip (e.g. "mentor_chat" mis-routed
-      // to the review agent, which returns no reply): fall back to in-process.
+      const remote = await callGlassboxAgent<MentorDialogueTurn>("tutor", {
+        code,
+        transcript,
+        message,
+      });
+      // Guard against a Coordinator routing slip (e.g. "tutor" mis-routed to
+      // the review agent, which returns no reply): fall back to in-process.
       if (typeof remote.reply !== "string" || !remote.reply) {
         throw new Error("Agent service returned a non-dialogue mentor payload");
       }

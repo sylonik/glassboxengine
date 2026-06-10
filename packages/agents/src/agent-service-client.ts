@@ -40,7 +40,7 @@ const AGENT_SERVICE_TIMEOUT_MS = Number(
 export type GlassboxAgentTask =
   | "reason"
   | "mentor"
-  | "mentor_chat"
+  | "tutor"
   | "simulate"
   | "architect";
 

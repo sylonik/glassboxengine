@@ -96,11 +96,31 @@ gcloud builds submit --tag "$REPO/workers:latest" -f Dockerfile.workers .
 cd services/glassbox-agents
 agents-cli login --status                              # ensure authenticated
 agents-cli info                                        # confirm deployment-target = agent_runtime
-agents-cli deploy                                      # requires explicit approval; deploys to Agent Runtime
+
+# Deploy WITH the MCP env vars so the agents reach the platform over MCP.
+# GLASSBOX_MCP_URL is a plain env var; GLASSBOX_MCP_API_KEY is sourced from
+# Secret Manager (reuses the demo project's key) and never appears on the CLI.
+agents-cli deploy \
+  --update-env-vars "GLASSBOX_MCP_URL=https://glassboxengine.dev/api/mcp" \
+  --secrets "GLASSBOX_MCP_API_KEY=DEMO_GLASSBOX_API_KEY" \
+  --no-confirm-project                                 # requires explicit approval
 ```
 After deploy, set `GLASSBOX_AGENT_SERVICE_URL` (and auth, if using the Vertex query endpoint)
 on the `glassbox-web` Cloud Run service so the API delegates LLM reasoning to the deployed agents.
 The `agent` service account (Terraform, `roles/aiplatform.user`) is the identity for this path.
+
+> **MCP secret access (one-time):** the Agent Runtime platform-managed service
+> account must be able to read the key. Grant it once:
+> ```bash
+> gcloud secrets add-iam-policy-binding DEMO_GLASSBOX_API_KEY \
+>   --project glassbox-engine \
+>   --member "serviceAccount:service-573736938351@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
+>   --role roles/secretmanager.secretAccessor
+> ```
+> The MCP endpoint (`/api/mcp`) ships with the **web** image, so deploy web (§2 /
+> CI) *before* redeploying the agents — otherwise the toolset 404s. When
+> `GLASSBOX_MCP_URL`/`GLASSBOX_MCP_API_KEY` are unset the agents simply run
+> tool-less, so a web/agent ordering slip degrades gracefully rather than breaking.
 
 > **Never deploy without explicit human approval.** Confirm the target GCP project first —
 > do not deploy experimental builds into a production project.

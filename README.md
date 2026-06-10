@@ -69,8 +69,9 @@ flowchart LR
     WEB --> CORE --> PG
     WEB -->|"GLASSBOX_AGENT_ENGINE · ADC auth"| COORD
     WEB -.->|"in-process Gemini fallback"| GENAI["@google/genai"]
-    WEB --> MCPSRV
     ae -->|"McpToolset · Bearer API key"| MCPSRV
+    MCPSRV -->|"tRPC · apiKeyProcedure"| CORE
+    MCPSRV -->|"rate limit"| RD
     WORKERS --> CH
     WEB --> RD
     WEB --> CH

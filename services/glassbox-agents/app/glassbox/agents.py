@@ -17,6 +17,19 @@ A Coordinator root agent (no output_schema) routes by a JSON `task` field to thr
 leaf sub-agents, each carrying a Pydantic output_schema for structured JSON output.
 Note: output_schema disables tools AND delegation, so only the leaves carry it; the
 Coordinator must not.
+
+Agent topology (as of MCP integration):
+  glassbox_coordinator           — root router, no output_schema
+    reasoner_agent               — output_schema=ReasonerOutput, no tools
+    mentor_agent                 — output_schema=MentorOutput, no tools
+    tutor_agent                  — output_schema=MentorChatOutput, no tools
+    persona_simulator_agent      — SequentialAgent (mirrors architect pattern)
+      persona_researcher         — MCP tools: get_catalog, get_feed, track_events
+      persona_formatter          — output_schema=PersonaSimOutput, no tools
+    architect_pipeline           — SequentialAgent
+      architect_planner          — local tool: translate_slider_config
+                                   + MCP tools: get_scoring_config, get_feed
+      architect_formatter        — output_schema=ArchitectOutput, no tools
 """
 
 import os
@@ -31,7 +44,8 @@ from app.glassbox.prompts import (
     COORDINATOR_INSTRUCTION,
     MENTOR_CHAT_INSTRUCTION,
     MENTOR_INSTRUCTION,
-    PERSONA_INSTRUCTION,
+    PERSONA_FORMATTER_INSTRUCTION,
+    PERSONA_RESEARCHER_INSTRUCTION,
     REASONER_INSTRUCTION,
 )
 from app.glassbox.schemas import (
@@ -41,7 +55,7 @@ from app.glassbox.schemas import (
     PersonaSimOutput,
     ReasonerOutput,
 )
-from app.glassbox.tools import translate_slider_config
+from app.glassbox.tools import build_glassbox_mcp_toolset, translate_slider_config
 
 # gemini-2.5-flash is available on Vertex AI in us-east1 (the Agent Engine
 # region). The AI-Studio alias "gemini-flash-latest" is NOT a Vertex publisher
@@ -107,18 +121,59 @@ def build_tutor() -> Agent:
     )
 
 
-def build_persona() -> Agent:
-    """Persona simulator agent (Cold Start): synthetic interactions for a persona."""
-    return Agent(
-        name="persona_simulator_agent",
+def build_persona() -> SequentialAgent:
+    """Persona simulator pipeline (Cold Start): synthetic interactions for a persona.
+
+    Mirrors the Architect pattern: output_schema disables tools, so we split into
+    a tool-using researcher step and a schema-enforced formatter step.
+
+    The SequentialAgent is named `persona_simulator_agent` so the Coordinator's
+    routing rule ("simulate" -> persona_simulator_agent) requires no change.
+    The final output_key `simulation_result` and PersonaSimOutput schema are
+    preserved on the formatter step, which is what the runtime contract and callers
+    consume.
+    """
+    # Step 1: ground in the real catalog + optionally write synthetic events.
+    # MCP toolset is optional — returns None if env vars are not set, and the
+    # agent falls back to the catalog supplied in the prompt payload.
+    persona_mcp = build_glassbox_mcp_toolset(
+        ["get_catalog", "get_feed", "track_events"]
+    )
+    researcher_tools = [persona_mcp] if persona_mcp is not None else []
+
+    researcher = Agent(
+        name="persona_researcher",
         model=_build_model(),
         description=(
-            "Generates synthetic user interactions for cold-start simulation and "
-            "persona testing against a product catalog."
+            "Grounds the persona simulation in the real product catalog via MCP, "
+            "plans synthetic interactions, and writes them back to the platform "
+            "via track_events. Falls back to catalog-from-payload when MCP is unavailable."
         ),
-        instruction=PERSONA_INSTRUCTION,
+        instruction=PERSONA_RESEARCHER_INSTRUCTION,
+        tools=researcher_tools,
+        output_key="persona_research",
+    )
+
+    # Step 2: format the researcher's findings into the structured output schema.
+    formatter = Agent(
+        name="persona_formatter",
+        model=_build_model(),
+        description=(
+            "Formats the persona researcher's analysis into the structured "
+            "PersonaSimOutput JSON."
+        ),
+        instruction=PERSONA_FORMATTER_INSTRUCTION,
         output_schema=PersonaSimOutput,
         output_key="simulation_result",
+    )
+
+    return SequentialAgent(
+        name="persona_simulator_agent",
+        description=(
+            "Generates synthetic user interactions for cold-start simulation and "
+            "persona testing against a product catalog, grounded in live platform data."
+        ),
+        sub_agents=[researcher, formatter],
     )
 
 
@@ -127,19 +182,28 @@ def build_architect() -> SequentialAgent:
 
     A two-step SequentialAgent: the planner reasons about the goal and grounds
     its proposal by calling the deterministic translate_slider_config tool (the
-    exact production slider->retrieval math); the formatter then emits the
-    structured ArchitectOutput. The split exists because output_schema disables
-    tools, so a single agent cannot both call the tool and guarantee JSON.
+    exact production slider->retrieval math) plus optionally the live MCP tools
+    get_scoring_config and get_feed to anchor the proposal in real platform state;
+    the formatter then emits the structured ArchitectOutput. The split exists
+    because output_schema disables tools, so a single agent cannot both call the
+    tool and guarantee JSON.
     """
+    # The MCP toolset is optional — returns None if env vars are not set.
+    architect_mcp = build_glassbox_mcp_toolset(["get_scoring_config", "get_feed"])
+    planner_tools: list = [translate_slider_config]
+    if architect_mcp is not None:
+        planner_tools.append(architect_mcp)
+
     planner = Agent(
         name="architect_planner",
         model=_build_model(),
         description=(
             "Reasons about a plain-language business goal and proposes intent-slider "
-            "values, grounded by the deterministic translate_slider_config tool."
+            "values, grounded by the deterministic translate_slider_config tool and "
+            "optionally the live platform scoring config."
         ),
         instruction=ARCHITECT_PLANNER_INSTRUCTION,
-        tools=[translate_slider_config],
+        tools=planner_tools,
         output_key="architect_plan",
     )
     formatter = Agent(

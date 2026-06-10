@@ -80,3 +80,28 @@ To set up your production infrastructure, run `agents-cli infra cicd`.
 ## Observability
 
 Built-in telemetry exports to Cloud Trace, BigQuery, and Cloud Logging.
+
+## Environment Variables
+
+### Required (GCP / Vertex AI)
+
+| Variable | Description |
+|----------|-------------|
+| `GLASSBOX_AGENT_MODEL` | Gemini model ID (default: `gemini-2.5-flash`) |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI region (default: `us-east1`) |
+| `LOGS_BUCKET_NAME` | GCS bucket for artifact storage (optional; falls back to in-memory) |
+
+### Glassbox Platform MCP Integration (optional — graceful degradation)
+
+These two vars connect the agents to the live Glassbox MCP server
+(`GLASSBOX_MCP_URL` e.g. `https://glassboxengine.dev/api/mcp`).
+When either var is unset the MCP toolset is silently skipped, so local
+development and the ADK playground work without a live MCP connection.
+
+| Variable | Description |
+|----------|-------------|
+| `GLASSBOX_MCP_URL` | Base URL of the Streamable-HTTP MCP server |
+| `GLASSBOX_MCP_API_KEY` | Bearer token sent as `Authorization: Bearer <key>` |
+
+To deploy with MCP enabled, add both vars as secrets in Secret Manager and
+reference them in the Cloud Run / Agent Engine service configuration.

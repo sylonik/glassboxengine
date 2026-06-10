@@ -4,16 +4,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { db } from "@glassbox/database/client";
 import { auth } from "~/lib/auth";
-import Redis from "ioredis";
-
-let _redis: Redis | undefined;
-function getRedis(): Redis | undefined {
-  if (_redis) return _redis;
-  const url = process.env.REDIS_URL;
-  if (!url) return undefined;
-  _redis = new Redis(url, { maxRetriesPerRequest: null });
-  return _redis;
-}
+import { getRedis } from "~/lib/redis";
 
 export const createTRPCContext = cache(async () => {
   const headersList = await headers();

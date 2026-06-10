@@ -56,13 +56,35 @@ export const rateLimitedProcedure = protectedProcedure.use(
 );
 
 /** Hash a raw API key to match against stored hashes */
-async function hashApiKey(raw: string): Promise<string> {
+export async function hashApiKey(raw: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(raw);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+/**
+ * Validate a Bearer API key against the database.
+ * Returns the key record (id, projectId, userId) on success, null otherwise.
+ * Does NOT enforce rate limits — that stays inside apiKeyProcedure.
+ */
+export async function validateApiKey(
+  db: Database,
+  authHeader: string | null | undefined
+): Promise<{ id: string; projectId: string; userId: string } | null> {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const keyHash = await hashApiKey(authHeader.slice(7));
+  const result = await db
+    .select()
+    .from(apiKeys)
+    .where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt)))
+    .limit(1);
+  const key = result[0];
+  if (!key) return null;
+  if (key.expiresAt && key.expiresAt < new Date()) return null;
+  return { id: key.id, projectId: key.projectId, userId: key.userId };
 }
 
 /**
@@ -105,10 +127,9 @@ export const apiKeyProcedure = t.procedure.use(async ({ ctx, next }) => {
 
   // Rate limit: 1000 req/min per API key
   if (ctx.redis) {
-    await enforceRateLimit(ctx.redis, `apikey:${key.id}`, {
-      limit: 1000,
-      windowSeconds: 60,
-    });
+    await enforceRateLimit(ctx.redis, `apikey:${key.id}`, { limit: 1000, windowSeconds: 60 });
+  } else if (process.env.NODE_ENV === "production") {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Rate limiter unavailable" });
   }
 
   // Update last used timestamp (fire-and-forget)

@@ -121,10 +121,21 @@ How to think about the sliders:
 - popularity: how much social proof / view counts matter. High = trending and
   safe; low = ignores the crowd (better margins on hidden gems, more trust risk).
 
-Process (do all three steps):
+Platform grounding (when get_scoring_config and get_feed tools are available):
+- BEFORE proposing sliders, call get_scoring_config to retrieve the CURRENT
+  production scoring configuration — use it to understand the active weight
+  regime, any active experiments, and what the engine is already optimising for.
+- Optionally call get_feed (with a representative queryText if one is implied by
+  the goal) to sample what the live engine currently returns; this helps you
+  understand the baseline and articulate what your proposal would CHANGE.
+- If these tools are unavailable, proceed from the goal text and catalogSummary
+  alone — the proposal is still valid, just not grounded in live state.
+
+Process (do all steps):
 1. Reason about the stated goal — what does it imply for each slider? Consider
    the currentSliders (what would CHANGE and why) and the catalogSummary (e.g.
    a catalog concentrated in one category limits how much diversity can do).
+   If you called get_scoring_config above, factor in the live config.
 2. Decide proposed values for all four sliders, then CALL the
    translate_slider_config tool with them. The tool returns the clamped sliders
    and the exact retrieval parameters the production engine will derive
@@ -134,9 +145,9 @@ Process (do all three steps):
    derived parameters from the tool result, a 2-4 sentence rationale tied to
    the goal, and 1-3 explicit tradeoffs the business should understand.
 
-Stay grounded: only reference catalog facts present in catalogSummary, and be
-honest about tensions in the goal (e.g. "maximize margin AND trust" pulls
-popularity in both directions).
+Stay grounded: only reference catalog facts present in catalogSummary (or live
+data returned by tools), and be honest about tensions in the goal (e.g.
+"maximize margin AND trust" pulls popularity in both directions).
 """
 
 ARCHITECT_FORMATTER_INSTRUCTION = """\
@@ -263,13 +274,23 @@ Return your answer as JSON matching the required schema:
 """
 
 # ---------------------------------------------------------------------------
-# Persona Simulator (Cold Start) — synthetic interactions.
-# Ported from persona-simulator.ts (simulation prompt) + adk persona-simulator-agent.ts.
+# Persona Simulator (Cold Start) — two-step SequentialAgent pipeline.
+#
+#   step 1  persona_researcher  — grounds the simulation in the REAL catalog
+#                                 and optionally writes synthetic events via MCP
+#   step 2  persona_formatter   — formats the researcher's findings into the
+#                                 structured PersonaSimOutput JSON
+#
+# The split mirrors the Architect pattern: output_schema disables tools, so the
+# tool-using step (researcher) must be separate from the schema-enforced step
+# (formatter).  The SequentialAgent is registered as persona_simulator_agent so
+# Coordinator routing for task "simulate" continues to work unchanged.
 # ---------------------------------------------------------------------------
 
-PERSONA_INSTRUCTION = """\
-You are simulating a synthetic user persona for a recommendation engine cold-start
-scenario.
+PERSONA_RESEARCHER_INSTRUCTION = """\
+You are the GlassBox Persona Researcher, the first step of a cold-start
+simulation pipeline. Your job is to ground the simulation in REAL catalog data
+and optionally push synthetic interaction events back to the platform.
 
 The user message is a JSON object with the shape:
 {
@@ -283,28 +304,61 @@ The user message is a JSON object with the shape:
     "engagementLevel": "low"|"medium"|"high"
   },
   "catalog": [ { "id": "<productId>", "name": "<name>", "category": "<category>",
-                 "description": "<text>" }, ... ]
+                 "description": "<text>" }, ... ]   // optional fallback
 }
 
-The engagement level caps how many interactions to generate: low -> up to 5,
-medium -> up to 15, high -> up to 30 (default to medium when unset).
+Platform grounding (when get_catalog, get_feed, and track_events tools are available):
+1. Call get_catalog (optionally with a category filter derived from the persona's
+   categoryPreferences) to retrieve the REAL product catalog. Use these real product
+   IDs and details in all interactions you generate — never invent product IDs.
+2. Optionally call get_feed to see what the live engine would surface for this
+   persona's top preference category; this enriches realism.
+3. After generating the interactions (see below), call track_events with the full
+   list of synthetic events so the platform ingests them for cold-start seeding.
+   Each event must include at least: userId (derive a stable ID from the persona
+   name, e.g. "persona-<slugified-name>"), type (one of "view", "click",
+   "cart_add", "purchase"), and itemId. itemId MUST be the catalog item's "id"
+   field (a UUID) copied exactly from get_catalog results — never the externalId,
+   name, or an invented value; track_events rejects non-UUID itemIds.
 
-Generate up to that many realistic synthetic interactions this persona would have.
-For each interaction:
-- Pick a product from the catalog by its ID (use only IDs that exist in the catalog).
-- Choose an interaction type: "view", "click", "cart_add", or "purchase".
-- Assign a confidence score (0.0-1.0) for how likely this persona is to perform this
-  action.
-- Provide brief reasoning explaining why this persona would interact with this product.
+Fallback (when MCP tools are unavailable):
+- Use the "catalog" array provided in the payload. If that is also absent or
+  empty, note the limitation and generate a minimal synthetic set.
 
-The interaction funnel should be realistic: more views than clicks, more clicks than
-cart_adds, more cart_adds than purchases. Consider the persona's price range, category
-preferences, and browsing patterns. Do not invent products that are not in the catalog.
+Engagement cap: low -> up to 5 interactions, medium -> up to 15, high -> up to 30
+(default medium when unset).
 
-Return your answer as JSON matching the required schema:
+For each interaction you plan:
+- Pick a product only from the catalog you retrieved (real or fallback).
+- Choose an event type: "view", "click", "cart_add", or "purchase".
+- Assign a confidence score (0.0-1.0).
+- Provide brief reasoning grounded in the persona's preferences.
+
+Funnel shape: more views than clicks > cart_adds > purchases.
+
+Output a structured research report as plain text / JSON that the formatter can
+use in the next step. Include:
+- The userId you used for event tracking.
+- The full list of planned interactions (productId, eventType, confidence, reasoning).
+- A brief summary (counts per event type).
+- Whether you successfully called track_events (and how many events were written),
+  or whether you fell back to catalog-from-payload.
+"""
+
+PERSONA_FORMATTER_INSTRUCTION = """\
+You are the output formatter for the GlassBox Persona Simulator.
+
+The researcher's findings are:
+{persona_research}
+
+Convert them into JSON matching the required schema, preserving all interactions
+and the summary exactly as reported by the researcher:
 {
   "interactions": [ { "productId", "eventType": "view"|"click"|"cart_add"|"purchase",
                       "confidence": <0-1>, "reasoning" }, ... ],
-  "summary": "<brief summary, e.g. counts of each interaction type>"
+  "summary": "<brief summary, e.g. '8 views, 4 clicks, 2 cart_adds, 1 purchase'>"
 }
+
+Only include productIds and event types that are present in the researcher's
+output. Do not invent additional interactions.
 """

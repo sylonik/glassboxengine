@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appRouter } from "@glassbox/api";
 import { db } from "@glassbox/database/client";
+import { getRedis } from "~/lib/redis";
 
 // Map tRPC error codes to HTTP status so a missing/invalid API key returns 401,
 // validation 400, rate-limit 429 — not an opaque 500.
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
   try {
     const caller = appRouter.createCaller({
       db,
+      redis: getRedis(),
       user: null,
       authHeader: req.headers.get("authorization"),
     });

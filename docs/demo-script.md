@@ -17,8 +17,9 @@ visible. Times are cumulative.
 
 ## 0:00 — Hook (15s)
 > "Personalization is a black box. GlassBox Engine makes it a glass box — built
-> on Google's Agent Development Kit and Gemini. Four agents, one transparent
-> recommendation pipeline. Let me show you."
+> on Google's Agent Development Kit and Gemini. Five ADK agents that reach the
+> live platform over the Model Context Protocol, turn plain-language intent into
+> a reward config, and explain every decision. Let me show you."
 
 Open the landing page; let the four pillar cards scroll into view.
 
@@ -65,6 +66,44 @@ popover with weighted bars and the trace id.
 ## 2:50 — Outro (5s)
 Cut to the architecture diagram (README) or the `/docs` API reference.
 > "GlassBox Engine. Aligned, testable, and explainable — end to end. Thanks for watching."
+
+---
+
+## Track 1 add-on — MCP: agents securely connecting to external tools (≈ 40s)
+
+> Track 1 asks specifically how the agent uses MCP to securely connect to
+> external tools, gather context, and act. Record this as a dedicated clip (or
+> splice it in after the Architect beat at 0:55).
+
+**The point to make:** the agents don't carry hardcoded data — they reach the
+live platform through a standards-based, auth-scoped MCP server. The exact same
+tool surface is open to any MCP client.
+
+1. **Show the contract.** Open **[docs/mcp-integration.md](mcp-integration.md)** and the
+   architecture diagram — trace the `McpToolset · Bearer API key` arrow from the
+   ADK agents on Agent Engine to `POST /api/mcp` on Cloud Run, then through
+   `tRPC · apiKeyProcedure` to Postgres/ClickHouse.
+   > "Five tools — get_feed, get_catalog, get_scoring_config, track_events,
+   > translate_sliders — each scoped to the project resolved from the API key."
+
+2. **Prove it live with a third-party MCP client** (MCP Inspector or Claude
+   Desktop) pointed at `https://glassboxengine.dev/api/mcp` with a project key:
+   ```bash
+   npx @modelcontextprotocol/inspector
+   # Transport: Streamable HTTP
+   # URL: https://glassboxengine.dev/api/mcp
+   # Header: Authorization: Bearer <project API key>
+   ```
+   Run `tools/list`, then call `get_catalog` and `get_feed` — show real catalog
+   rows and ranked items with score breakdowns coming back.
+   > "No bespoke glue — a standard MCP handshake. And security is real: drop the
+   > key and even `tools/list` returns 401."
+
+3. **Tie it back to the agents.** In Persona Lab, run **Simulate**; narrate that
+   the persona agent just called `get_catalog` and wrote synthetic events back
+   via `track_events` over this same MCP server — and the Architect grounded its
+   proposal by reading `get_scoring_config` live.
+   > "Declarative intent in, autonomous tool use out — over MCP, end to end."
 
 ---
 

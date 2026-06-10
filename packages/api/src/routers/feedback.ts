@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { and, eq, desc, gte } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { and, eq, desc, gte, inArray } from "drizzle-orm";
 import { feedbackEvents, products } from "@glassbox/database/schema";
 import {
   enqueueFeedbackEvent,
@@ -162,6 +163,25 @@ export const feedbackRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // FIX 5 — verify every productId belongs to this project
+      const distinctProductIds = [...new Set(input.events.map((e) => e.productId))];
+      const owned = await ctx.db
+        .select({ id: products.id })
+        .from(products)
+        .where(
+          and(
+            inArray(products.id, distinctProductIds),
+            eq(products.projectId, ctx.projectId),
+            eq(products.userId, ctx.userId)
+          )
+        );
+      if (owned.length !== distinctProductIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "One or more productId values are not in your catalog",
+        });
+      }
+
       const result = await ctx.db
         .insert(feedbackEvents)
         .values(

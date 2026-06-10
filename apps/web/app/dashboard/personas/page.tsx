@@ -34,6 +34,7 @@ import {
   DialogFooter,
 } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
+import { ConfigComparison } from "~/components/personas/config-comparison";
 
 interface BehaviorConfig {
   browsingPatterns?: string[];
@@ -281,6 +282,9 @@ export default function PersonasPage() {
           </div>
         )}
       </div>
+
+      {/* Strategy comparison across simulated personas (Logic Drift) */}
+      <ConfigComparison projectId={activeProjectId} />
 
       {/* Create Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>

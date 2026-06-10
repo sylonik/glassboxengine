@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useTRPC } from "~/trpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useActiveProject } from "../project_context";
-import { Play, Save, ScanEye, Sparkles, Users } from "lucide-react";
+import { Pin, Play, Save, ScanEye, Sparkles, Users } from "lucide-react";
 import { PageHeader } from "~/components/layout/page-header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -74,6 +74,16 @@ interface PersonaRef {
   name: string;
 }
 
+interface FeedSnapshot {
+  sliders: SliderState;
+  /** Item id → rank (1-based) at snapshot time. */
+  ranks: Map<string, number>;
+  /** Item id → score at snapshot time. */
+  scores: Map<string, number>;
+  names: Map<string, string>;
+  label: string;
+}
+
 interface ArchitectProposalView {
   profileName: string;
   sliders: SliderState;
@@ -129,6 +139,7 @@ function AlignmentPageContent({
   const [appliedPersona, setAppliedPersona] = useState<PersonaRef | null>(null);
   const [goalText, setGoalText] = useState("");
   const [proposal, setProposal] = useState<ArchitectProposalView | null>(null);
+  const [snapshot, setSnapshot] = useState<FeedSnapshot | null>(null);
 
   const trpc = useTRPC();
 
@@ -261,6 +272,51 @@ function AlignmentPageContent({
   };
 
   const getReasoningForItem = (itemId: string) => reasoning.find((r) => r.itemId === itemId);
+
+  const handlePinSnapshot = () => {
+    if (feed.length === 0) return;
+    setSnapshot({
+      sliders: { ...sliders },
+      ranks: new Map(feed.map((item, index) => [item.id, index + 1])),
+      scores: new Map(feed.map((item) => [item.id, item.score])),
+      names: new Map(feed.map((item) => [item.id, item.name])),
+      label: `R:${sliders.relevance.toFixed(2)} D:${sliders.diversity.toFixed(2)} N:${sliders.novelty.toFixed(2)} P:${sliders.popularity.toFixed(2)}`,
+    });
+  };
+
+  // Diff the current feed against the pinned snapshot: rank moves, new entries,
+  // and items that dropped out entirely.
+  const feedDiff = snapshot
+    ? (() => {
+        const currentIds = new Set(feed.map((item) => item.id));
+        const rows = feed.map((item, index) => {
+          const beforeRank = snapshot.ranks.get(item.id) ?? null;
+          const beforeScore = snapshot.scores.get(item.id) ?? null;
+          return {
+            id: item.id,
+            name: item.name,
+            afterRank: index + 1,
+            beforeRank,
+            afterScore: item.score,
+            beforeScore,
+            status: beforeRank === null ? ("entered" as const) : ("moved" as const),
+          };
+        });
+        const dropped = [...snapshot.ranks.entries()]
+          .filter(([id]) => !currentIds.has(id))
+          .sort((a, b) => a[1] - b[1])
+          .map(([id, beforeRank]) => ({
+            id,
+            name: snapshot.names.get(id) ?? id,
+            afterRank: null,
+            beforeRank,
+            afterScore: null,
+            beforeScore: snapshot.scores.get(id) ?? null,
+            status: "dropped" as const,
+          }));
+        return [...rows, ...dropped];
+      })()
+    : [];
 
   return (
     <div>
@@ -542,8 +598,28 @@ function AlignmentPageContent({
                     {feed.length} items
                   </Badge>
                 )}
+                {feed.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePinSnapshot}
+                    title="Pin this feed, change sliders, re-run, and see what moved"
+                  >
+                    <Pin size={13} />
+                    {snapshot ? "Re-pin" : "Pin snapshot"}
+                  </Button>
+                )}
               </div>
             </div>
+
+            {snapshot && (
+              <FeedDiffPanel
+                rows={feedDiff}
+                beforeLabel={snapshot.label}
+                afterLabel={`R:${sliders.relevance.toFixed(2)} D:${sliders.diversity.toFixed(2)} N:${sliders.novelty.toFixed(2)} P:${sliders.popularity.toFixed(2)}`}
+                onClear={() => setSnapshot(null)}
+              />
+            )}
 
             {updateSliders.isPending && <PipelineIndicator isRunning />}
 
@@ -633,6 +709,114 @@ function AlignmentPageContent({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface DiffRow {
+  id: string;
+  name: string;
+  afterRank: number | null;
+  beforeRank: number | null;
+  afterScore: number | null;
+  beforeScore: number | null;
+  status: "moved" | "entered" | "dropped";
+}
+
+/**
+ * Before/after diff of the feed: pin a snapshot, drag the sliders, re-run, and
+ * see exactly which items rose, fell, entered, or dropped out — making logic
+ * drift visible instead of a feed that silently rearranges itself.
+ */
+function FeedDiffPanel({
+  rows,
+  beforeLabel,
+  afterLabel,
+  onClear,
+}: {
+  rows: DiffRow[];
+  beforeLabel: string;
+  afterLabel: string;
+  onClear: () => void;
+}) {
+  const moved = rows.filter((row) => row.status === "moved").length;
+  const entered = rows.filter((row) => row.status === "entered").length;
+  const dropped = rows.filter((row) => row.status === "dropped").length;
+  const unchanged = beforeLabel === afterLabel;
+
+  return (
+    <div className="mb-4 rounded-md border border-primary/30 bg-primary/5 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Before → After
+        </span>
+        <button
+          onClick={onClear}
+          className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+        >
+          Clear
+        </button>
+      </div>
+      <div className="mb-2 flex flex-col gap-0.5 font-mono text-[10px] text-muted-foreground">
+        <span>before {beforeLabel}</span>
+        <span>after&nbsp;&nbsp;{afterLabel}</span>
+      </div>
+
+      {unchanged ? (
+        <p className="text-xs text-muted-foreground">
+          Sliders unchanged since the snapshot — adjust them and run again to
+          see the feed move.
+        </p>
+      ) : (
+        <>
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            <Badge variant="secondary" className="text-[10px]">{moved} re-ranked</Badge>
+            <Badge variant="secondary" className="text-[10px] text-success">
+              {entered} entered
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] text-destructive">
+              {dropped} dropped
+            </Badge>
+          </div>
+          <div className="flex flex-col gap-1">
+            {rows.map((row) => {
+              const move =
+                row.beforeRank !== null && row.afterRank !== null
+                  ? row.beforeRank - row.afterRank
+                  : 0;
+              return (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1 text-xs"
+                >
+                  <span className="min-w-0 truncate text-foreground">{row.name}</span>
+                  <span className="flex shrink-0 items-center gap-2 font-mono text-[11px]">
+                    <span className="text-muted-foreground">
+                      {row.beforeRank ? `#${row.beforeRank}` : "—"} →{" "}
+                      {row.afterRank ? `#${row.afterRank}` : "—"}
+                    </span>
+                    {row.status === "entered" && (
+                      <span className="text-success">new ▲</span>
+                    )}
+                    {row.status === "dropped" && (
+                      <span className="text-destructive">out ▼</span>
+                    )}
+                    {row.status === "moved" && move !== 0 && (
+                      <span className={move > 0 ? "text-success" : "text-destructive"}>
+                        {move > 0 ? "▲" : "▼"}
+                        {Math.abs(move)}
+                      </span>
+                    )}
+                    {row.status === "moved" && move === 0 && (
+                      <span className="text-muted-foreground">=</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

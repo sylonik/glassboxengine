@@ -9,7 +9,7 @@ service) and verified in **Chrome** (Playwright/Chromium). Screenshots per featu
 
 | Pillar | Feature | Status | Verified | Screenshots |
 |---|---|---|---|---|
-| **Logic Drift** | Intent Sliders → ranked feed (Alignment Studio) | ✅ demo-tight | sliders re-rank a 10-item feed with matched signals + weight distribution | [logic-drift-sliders/](images/logic-drift-sliders) |
+| **Logic Drift** | Intent Sliders → ranked feed **+ before/after snapshot diff** (NEW) | ✅ demo-tight | sliders re-rank a 10-item feed with matched signals + weight distribution; pin a snapshot, drag sliders, re-run, and a diff panel shows which items rose/fell/entered/dropped | [logic-drift-sliders/](images/logic-drift-sliders) |
 | **Explainability** | Glass Box audit traces **+ per-item drill-down** (NEW) | ✅ demo-tight | feed card expands to show score-breakdown bars (relevance/diversity/novelty/popularity), detailed reasoning, matched signals | [explainability-reasoning-traces/](images/explainability-reasoning-traces) |
 | **Cold Start** | Persona Lab + **persona-personalized feed** (NEW) | ✅ demo-tight | selecting a persona biases ranking via its preference vector; "Personalized for: …" badge | [cold-start-personas/](images/cold-start-personas) |
 | **Education** | Socratic Mentor **review + multi-turn dialogue** (NEW) | ✅ demo-tight | commit runs the Mentor (LLM): verdict + issues-by-category + Socratic dialogue; blocked commits open a multi-turn chat where the engineer answers the Mentor's questions and gets follow-ups until "ready to commit" — the Mentor guides, never writes the fix | [education-mentor/](images/education-mentor) |

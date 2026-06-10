@@ -33,6 +33,11 @@ const spec = {
         type: "object",
         properties: {
           itemId: { type: "string", format: "uuid" },
+          externalId: {
+            type: ["string", "null"],
+            description:
+              "Your own product id (the catalog external_id you imported), for mapping feed items back onto your catalog.",
+          },
           name: { type: "string" },
           description: { type: ["string", "null"] },
           category: { type: ["string", "null"] },
@@ -58,7 +63,7 @@ const spec = {
             items: { type: "string" },
           },
         },
-        required: ["itemId", "name", "description", "category", "score", "reasoning", "confidenceScore", "scoreBreakdown", "matchedSignals"],
+        required: ["itemId", "externalId", "name", "description", "category", "score", "reasoning", "confidenceScore", "scoreBreakdown", "matchedSignals"],
       },
       ReasoningStep: {
         type: "object",

@@ -146,3 +146,23 @@ gcloud beta run domain-mappings describe \
 - **Rotating the API key:** add a new secret version
   (`gcloud secrets versions add DEMO_GLASSBOX_API_KEY --data-file=-`) and redeploy
   (or re-run the deploy with `--update-secrets ...:latest`) so Cloud Run picks it up.
+
+## 6. Recommendation rail (engine feed → storefront)
+
+The home page renders a **"Recommended for you"** rail backed by the engine's
+public `POST /api/glassbox.feed` endpoint, proxied server-side through the
+store's `/api/recommendations` route (the API key never needs to reach the
+browser for this path). Feed items are mapped back onto storefront products by
+`externalId` (the product slug), with a name-based fallback.
+
+For the mapping to be exact, the engine project's catalog should be imported
+from the storefront's own catalog feed:
+
+1. In Catalog Studio (demo-owner account), choose **hosted feed URL** and point
+   it at `https://demo.glassboxengine.dev/api/catalog.json`.
+2. Run embeddings as usual. The import sets each product's `externalId` to the
+   storefront slug, which the feed API echoes back per item.
+
+The rail degrades gracefully: any engine error (missing key, 4xx/5xx, timeout)
+renders the plain storefront with no rail. `/api/health` on the demo service
+reports whether the engine credentials are configured.

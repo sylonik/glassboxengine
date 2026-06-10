@@ -73,6 +73,7 @@ export async function runArchitectAgent(
   const strictResults = await db
     .select({
       id: products.id,
+      externalId: products.externalId,
       name: products.name,
       description: products.description,
       category: products.category,
@@ -92,6 +93,7 @@ export async function runArchitectAgent(
       : await db
           .select({
             id: products.id,
+            externalId: products.externalId,
             name: products.name,
             description: products.description,
             category: products.category,
@@ -151,9 +153,17 @@ export async function runArchitectAgent(
       .slice(0, 2)
       .map((factor) => factor.name);
 
+    // external_id is namespaced as "<projectId>:<integrator id>" in the DB;
+    // surface the integrator's original id at the API boundary.
+    const externalId =
+      projectId && item.externalId?.startsWith(`${projectId}:`)
+        ? item.externalId.slice(projectId.length + 1)
+        : item.externalId;
+
     return {
       id: item.id,
       itemId: item.id,
+      externalId,
       name: item.name,
       description: item.description,
       category: item.category,

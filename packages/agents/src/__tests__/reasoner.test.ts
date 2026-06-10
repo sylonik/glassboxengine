@@ -8,6 +8,7 @@ describe("runReasonerAgent", () => {
         {
           id: "item-1",
           itemId: "item-1",
+          externalId: "sku-headphones-01",
           name: "Wireless Headphones",
           description: null,
           category: "Electronics",

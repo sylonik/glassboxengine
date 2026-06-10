@@ -1,6 +1,9 @@
 /** A single item in the personalized feed response */
 export interface FeedItem {
   itemId: string;
+  /** Your own product id (the catalog external_id you imported), for mapping
+   * feed items back onto your catalog. Null for products created without one. */
+  externalId: string | null;
   name: string;
   description: string | null;
   category: string | null;

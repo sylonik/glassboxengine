@@ -34,6 +34,9 @@ export interface ScoreContribution {
 export interface RankedRecommendationItem {
   id: string;
   itemId: string;
+  /** The integrator's own product id (catalog external_id), so feed items can
+   * be mapped back onto their catalog without knowing GlassBox UUIDs. */
+  externalId: string | null;
   name: string;
   description: string | null;
   category: string | null;

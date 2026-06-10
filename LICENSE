@@ -1,0 +1,61 @@
+Glassbox Engine Source Available License v1.0
+
+Copyright (c) 2024–2025 Sylonik (lahiru@sylonik.se)
+
+TERMS AND CONDITIONS
+
+1. DEFINITIONS
+
+   "Software" means the source code, documentation, configuration, and all
+   associated files in this repository.
+
+   "Commercial Use" means any use intended for or resulting in commercial
+   advantage or monetary compensation, including use in a SaaS product,
+   managed service, or internal business tooling.
+
+2. GRANT OF RIGHTS
+
+   Subject to the terms of this License, you are granted a limited,
+   non-exclusive, non-transferable right to:
+
+   a. View and read the Software for personal, educational, or evaluation
+      purposes; and
+   b. Fork the repository on a hosted Git platform solely to submit
+      contributions back to this project via pull request.
+
+3. RESTRICTIONS
+
+   You may NOT, without prior written permission from the copyright holder:
+
+   a. Use the Software, in whole or in part, for Commercial Use;
+   b. Redistribute, sublicense, or publish copies of the Software;
+   c. Create and distribute derivative works based on the Software;
+   d. Offer the Software as a service, API, or hosted product to third
+      parties;
+   e. Remove or alter any proprietary notices, copyright statements, or
+      this License from the Software.
+
+4. CONTRIBUTIONS
+
+   By submitting a pull request or patch you agree that your contribution
+   is offered under the same terms as this License and you grant the
+   copyright holder a perpetual, irrevocable, royalty-free right to use,
+   modify, and relicense your contribution.
+
+5. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR
+   ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF OR
+   INABILITY TO USE THE SOFTWARE.
+
+6. COMMERCIAL LICENSING
+
+   For commercial licensing, partnership inquiries, or OEM arrangements,
+   contact: lahiru@sylonik.se
+
+---
+
+SPDX-License-Identifier: LicenseRef-GlassboxSourceAvailable-1.0

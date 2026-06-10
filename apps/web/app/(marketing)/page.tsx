@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { JsonLd } from "~/components/marketing/json-ld";
 import {
@@ -221,6 +222,32 @@ export default function LandingPage() {
             queryable. Transparency is the default, not an afterthought.
           </p>
           <div className="lp-spectrum-edge" aria-hidden />
+        </div>
+      </section>
+
+      {/* ── Mobile preview ──────────────────────────────── */}
+      <section className="lp-section lp-mobile-preview">
+        <div className="lp-section-head">
+          <p className="lp-eyebrow">
+            <span className="lp-dot" /> Works everywhere
+          </p>
+          <h2 className="lp-h2">
+            Full control,{" "}
+            <span className="lp-display-italic">any screen.</span>
+          </h2>
+          <p className="lp-sub" style={{ maxWidth: "52ch", margin: "0 auto" }}>
+            Inspect reasoning traces, drag intent sliders, and review mentor feedback from any device — the glass box travels with you.
+          </p>
+        </div>
+        <div className="lp-mobile-frame">
+          <Image
+            src="/screenshots/mobile-preview.png"
+            alt="GlassBox Engine on mobile — reasoning traces and intent sliders"
+            width={390}
+            height={844}
+            className="lp-mobile-img"
+            priority={false}
+          />
         </div>
       </section>
 

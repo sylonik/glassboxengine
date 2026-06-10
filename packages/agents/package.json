@@ -24,6 +24,7 @@
     "@glassbox/database": "workspace:*",
     "@glassbox/telemetry": "workspace:*",
     "drizzle-orm": "^0.41.0",
+    "google-auth-library": "^10.6.2",
     "zod": "^3.24.0"
   },
   "devDependencies": {

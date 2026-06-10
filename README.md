@@ -6,8 +6,11 @@ An AI-powered recommendation engine with explainable AI. GlassBox provides perso
 
 GlassBox uses a **hybrid** runtime: the deterministic ranking core and all app services
 are TypeScript on **Cloud Run**, while the LLM-reasoning agents run as a **Python ADK**
-service on **Vertex AI Agent Engine**. The TS side delegates LLM steps to that service
-behind `GLASSBOX_AGENT_SERVICE_URL`, with an in-process `@google/genai` fallback.
+service on **Vertex AI Agent Engine**. In production the TS side calls the deployed
+reasoning engine directly (`GLASSBOX_AGENT_ENGINE`, authenticated via the Cloud Run
+runtime SA); for local dev it can target an `adk api_server`
+(`GLASSBOX_AGENT_SERVICE_URL`). Both paths keep an in-process `@google/genai` fallback
+so the product never dead-ends if the agent service is unavailable.
 
 ```
 apps/web                 Next.js 16 frontend + tRPC API handler
@@ -68,6 +71,8 @@ For the first production-like run, open `Catalog Studio` after sign-in and eithe
 | `BETTER_AUTH_SECRET` | Auth secret (min 32 chars) | Yes |
 | `BETTER_AUTH_URL` | Auth service URL | Yes |
 | `GOOGLE_API_KEY` | Gemini API key for agents | Yes |
+| `GLASSBOX_AGENT_ENGINE` | Vertex AI Agent Engine resource name (`projects/<p>/locations/<l>/reasoningEngines/<id>`); routes agent calls to the Python ADK agents via ADC (prod path) | No (in-process fallback) |
+| `GLASSBOX_AGENT_SERVICE_URL` | Local `adk api_server` URL for the Python agents (dev alternative) | No |
 | `NEXT_PUBLIC_APP_URL` | Frontend URL | Yes |
 | `REDIS_URL` | Redis URL for BullMQ | Yes |
 | `CLICKHOUSE_URL` | ClickHouse HTTP URL | Yes |

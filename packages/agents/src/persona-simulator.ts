@@ -9,6 +9,13 @@ import {
 import type { PersonaBehaviorConfig } from "@glassbox/database";
 import { generateEmbedding } from "./embedding-generator";
 import { genai, DEFAULT_MODEL } from "./config";
+import {
+  callGlassboxAgent,
+  isAgentServiceEnabled,
+} from "./agent-service-client";
+import { createLogger } from "@glassbox/telemetry";
+
+const logger = createLogger("agents:persona-simulator");
 
 export interface SimulatedInteraction {
   productId: string;
@@ -198,6 +205,66 @@ async function generateInteractions(
   };
   const maxInteractions = engagementCounts[behavior.engagementLevel || "medium"].maxInteractions;
 
+  // HYBRID: delegate the simulation to the Python ADK persona agent (Vertex AI
+  // Agent Engine in prod) when configured; fall through to the in-process
+  // Gemini call on any failure so a simulation never dead-ends.
+  if (isAgentServiceEnabled()) {
+    try {
+      const remote = await callGlassboxAgent<{
+        interactions: Array<{
+          productId: string;
+          eventType: SimulatedInteraction["interactionType"];
+          confidence: number;
+          reasoning: string;
+        }>;
+      }>("simulate", {
+        persona: {
+          name: persona.name,
+          description: persona.description ?? "General user",
+          browsingPatterns: behavior.browsingPatterns ?? ["discovery"],
+          priceRange: behavior.priceRange ?? { min: 0, max: 500 },
+          categoryPreferences: behavior.categoryPreferences ?? [],
+          engagementLevel: behavior.engagementLevel ?? "medium",
+        },
+        catalog: catalog.map((p) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          description: (p.description ?? "").slice(0, 80),
+        })),
+      });
+
+      const nameById = new Map(catalog.map((p) => [p.id, p.name]));
+      const raw: SimulatedInteraction[] = (remote.interactions ?? []).map(
+        (interaction) => ({
+          productId: interaction.productId,
+          productName: nameById.get(interaction.productId) ?? "",
+          interactionType: interaction.eventType,
+          confidence: interaction.confidence,
+          reasoning: interaction.reasoning,
+        })
+      );
+      const validated = await validateAndLogInteractions(
+        raw,
+        catalog,
+        traceId,
+        userId,
+        projectId,
+        "agent-engine"
+      );
+      if (validated.length > 0) return validated;
+      logger.warn(
+        { traceId },
+        "Agent service simulation returned no valid interactions; falling back to in-process Gemini"
+      );
+    } catch (err) {
+      logger.warn(
+        { err, traceId },
+        "Agent service simulate call failed; falling back to in-process Gemini"
+      );
+    }
+  }
+
   const prompt = `You are simulating a synthetic user persona for a recommendation engine cold-start scenario.
 
 Persona: "${persona.name}"
@@ -237,33 +304,14 @@ Return ONLY a valid JSON array of objects with: "productId", "productName", "int
     const text = response.text ?? "[]";
     const raw = JSON.parse(text) as SimulatedInteraction[];
 
-    // Validate product IDs exist in catalog
-    const catalogIds = new Set(catalog.map((p) => p.id));
-    const validated = raw.filter(
-      (interaction) =>
-        catalogIds.has(interaction.productId) &&
-        ["view", "click", "cart_add", "purchase"].includes(interaction.interactionType) &&
-        typeof interaction.confidence === "number" &&
-        interaction.confidence >= 0 &&
-        interaction.confidence <= 1
+    const validated = await validateAndLogInteractions(
+      raw,
+      catalog,
+      traceId,
+      userId,
+      projectId,
+      "in-process"
     );
-
-    // Log each product match for traceability
-    for (const interaction of validated) {
-      await db.insert(auditLogs).values({
-        userId,
-        projectId,
-        action: "simulation.product_match",
-        agentName: "PersonaSimulator",
-        reasoning: `${interaction.interactionType} on "${interaction.productName}" (confidence: ${interaction.confidence.toFixed(2)}): ${interaction.reasoning}`,
-        traceId,
-        confidenceScore: interaction.confidence,
-        metadata: {
-          productId: interaction.productId,
-          interactionType: interaction.interactionType,
-        },
-      });
-    }
 
     // The LLM can return an empty array or product ids that don't match the
     // catalog (mangled/hallucinated UUIDs), leaving `validated` empty. Falling
@@ -278,6 +326,50 @@ Return ONLY a valid JSON array of objects with: "productId", "productName", "int
     // Gemini call / JSON parse failed entirely — use the same deterministic funnel.
     return buildFallbackInteractions(catalog, behavior, maxInteractions);
   }
+}
+
+/**
+ * Drop interactions that reference products outside the catalog or carry
+ * malformed types/confidence, and write a Glass Box audit row per kept
+ * interaction so the simulation stays traceable regardless of which runtime
+ * (Agent Engine or in-process Gemini) produced it.
+ */
+async function validateAndLogInteractions(
+  raw: SimulatedInteraction[],
+  catalog: Array<{ id: string; name: string }>,
+  traceId: string,
+  userId: string,
+  projectId: string,
+  runtime: "agent-engine" | "in-process"
+): Promise<SimulatedInteraction[]> {
+  const catalogIds = new Set(catalog.map((p) => p.id));
+  const validated = raw.filter(
+    (interaction) =>
+      catalogIds.has(interaction.productId) &&
+      ["view", "click", "cart_add", "purchase"].includes(interaction.interactionType) &&
+      typeof interaction.confidence === "number" &&
+      interaction.confidence >= 0 &&
+      interaction.confidence <= 1
+  );
+
+  for (const interaction of validated) {
+    await db.insert(auditLogs).values({
+      userId,
+      projectId,
+      action: "simulation.product_match",
+      agentName: "PersonaSimulator",
+      reasoning: `${interaction.interactionType} on "${interaction.productName}" (confidence: ${interaction.confidence.toFixed(2)}): ${interaction.reasoning}`,
+      traceId,
+      confidenceScore: interaction.confidence,
+      metadata: {
+        productId: interaction.productId,
+        interactionType: interaction.interactionType,
+        runtime,
+      },
+    });
+  }
+
+  return validated;
 }
 
 /**

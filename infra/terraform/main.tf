@@ -212,12 +212,20 @@ module "cloud_run_web" {
   memory               = var.web_memory
   cpu_always_allocated = false
 
-  env = {
-    NODE_ENV = "production"
-    # PORT is reserved by Cloud Run (set automatically to the container port).
-    OTEL_SERVICE_NAME           = var.otel_service_name
-    OTEL_EXPORTER_OTLP_ENDPOINT = var.otel_exporter_otlp_endpoint
-  }
+  env = merge(
+    {
+      NODE_ENV = "production"
+      # PORT is reserved by Cloud Run (set automatically to the container port).
+      OTEL_SERVICE_NAME           = var.otel_service_name
+      OTEL_EXPORTER_OTLP_ENDPOINT = var.otel_exporter_otlp_endpoint
+    },
+    # Routes the LLM-reasoning agent calls (mentor/simulate/architect) through
+    # the Python ADK agents on Vertex AI Agent Engine. Empty string disables it
+    # (in-process @google/genai fallback).
+    var.agent_engine_resource == "" ? {} : {
+      GLASSBOX_AGENT_ENGINE = var.agent_engine_resource
+    }
+  )
 
   secret_env = local.web_secret_env
 

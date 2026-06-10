@@ -51,6 +51,9 @@ locals {
   web_project_roles = [
     "roles/cloudsql.client",
     "roles/cloudtrace.agent",
+    # The web app calls the GlassBox reasoning agents on Vertex AI Agent Engine
+    # (GLASSBOX_AGENT_ENGINE) with its runtime SA via ADC.
+    "roles/aiplatform.user",
   ]
   workers_project_roles = [
     "roles/cloudsql.client",

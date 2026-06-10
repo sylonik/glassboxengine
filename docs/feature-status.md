@@ -31,13 +31,18 @@ service) and verified in **Chrome** (Playwright/Chromium). Screenshots per featu
 - Python ADK service: `services/glassbox-agents` — Coordinator → Reasoner / Mentor / Persona
   sub-agents, structured Pydantic output, deploys to Vertex AI Agent Engine. See
   [services/glassbox-agents/DESIGN_SPEC.md](../services/glassbox-agents/DESIGN_SPEC.md).
-- TS can delegate to it behind `GLASSBOX_AGENT_SERVICE_URL` with in-process fallback
-  (`packages/agents/src/agent-service-client.ts`). Verified locally: the TS Mentor returned a
-  real LLM review through the Python Coordinator→Mentor agent.
-- **Production note:** the deployed `glassbox-web` Cloud Run service does **not** set
-  `GLASSBOX_AGENT_SERVICE_URL` / `GLASSBOX_USE_ADK`, so prod runs the in-process `@google/genai`
-  path, not the Agent Engine. Wiring the hybrid path in prod is an open item (set the env vars +
-  add a Vertex `stream_query` transport to the client).
+- TS delegates to it through `packages/agents/src/agent-service-client.ts`, which has two
+  transports: **Vertex AI Agent Engine** (`GLASSBOX_AGENT_ENGINE`, ADC auth via the runtime SA,
+  managed sessions + `:streamQuery`) and a local `adk api_server` (`GLASSBOX_AGENT_SERVICE_URL`).
+  Both fall back in-process on any error. Verified locally: the TS Mentor returned a real LLM
+  review through the Python Coordinator→Mentor agent.
+- **Production wiring:** Terraform now sets `GLASSBOX_AGENT_ENGINE` on `glassbox-web` (var
+  `agent_engine_resource`, defaulting to the deployed engine) and grants the web SA
+  `roles/aiplatform.user`. Mentor reviews and persona simulations run on Agent Engine in prod,
+  with the in-process Gemini path as fallback. Requires `terraform apply` (or
+  `gcloud run services update glassbox-web --region us-central1
+  --set-env-vars GLASSBOX_AGENT_ENGINE=projects/573736938351/locations/us-east1/reasoningEngines/617732020763623424`
+  plus the IAM grant) after the next image deploy.
 
 ## Cloud deploy status (GCP project `glassbox-engine`)
 
@@ -54,13 +59,12 @@ only** (`allowAll: true`, leaving the org-wide restriction intact for all other 
 `allUsers` was granted `roles/run.invoker` on `glassbox-web`. The app's own better-auth still
 gates the dashboard; the public `/api/glassbox.*` endpoints remain API-key gated.
 
-**Agent Engine (Vertex AI) — deployed & smoke-tested, NOT wired into the prod web path:** the
+**Agent Engine (Vertex AI) — deployed, smoke-tested, and wired into the prod web path:** the
 Python ADK agents are deployed to **Vertex AI Agent Engine** (us-east1), reasoning engine
 `projects/573736938351/locations/us-east1/reasoningEngines/617732020763623424`. Smoke-tested
 on Vertex: Coordinator routes `mentor` → Socratic review JSON and `reason` → Glass Box labels JSON.
-**The deployed web app does not call this engine** (see the production note above) — it uses the
-in-process Gemini fallback. The engine is reachable directly via the `vertexai` SDK but is not
-yet on the `glassbox-web` request path.
+The web app calls this engine through the `GLASSBOX_AGENT_ENGINE` transport (see the production
+wiring note above); the in-process Gemini path remains as automatic fallback.
 Deploy notes (fixed during deploy): the agent must run in **Vertex mode** (`GOOGLE_GENAI_USE_VERTEXAI=true`,
 no bundled `GOOGLE_API_KEY`) so the runtime SA's OAuth serves the managed SessionService
 (API keys are rejected with 401), and the model is **`gemini-2.5-flash`** (the AI-Studio alias

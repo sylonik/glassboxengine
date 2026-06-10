@@ -181,3 +181,15 @@ variable "demo_glassbox_endpoint" {
   type        = string
   default     = "https://glassbox-web-573736938351.us-central1.run.app"
 }
+
+# --- Vertex AI Agent Engine ---------------------------------------------------
+variable "agent_engine_resource" {
+  description = <<-EOT
+    Full resource name of the deployed GlassBox reasoning engine
+    (projects/<p>/locations/<l>/reasoningEngines/<id>). When set, glassbox-web
+    routes mentor/simulate/architect agent calls to Vertex AI Agent Engine via
+    GLASSBOX_AGENT_ENGINE; empty string keeps the in-process Gemini fallback.
+  EOT
+  type        = string
+  default     = "projects/573736938351/locations/us-east1/reasoningEngines/617732020763623424"
+}

@@ -37,7 +37,12 @@ const AGENT_SERVICE_TIMEOUT_MS = Number(
   process.env.GLASSBOX_AGENT_SERVICE_TIMEOUT_MS ?? "45000"
 );
 
-export type GlassboxAgentTask = "reason" | "mentor" | "simulate" | "architect";
+export type GlassboxAgentTask =
+  | "reason"
+  | "mentor"
+  | "mentor_chat"
+  | "simulate"
+  | "architect";
 
 /** True when a remote agent service (Agent Engine or local ADK) is configured. */
 export function isAgentServiceEnabled(): boolean {

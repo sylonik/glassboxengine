@@ -10,12 +10,13 @@ and are invoked by the TS API via `GLASSBOX_AGENT_ENGINE` (Agent Engine, prod) o
 A single **Coordinator** root agent routes a JSON `task` to one of four sub-agents
 (mirrors the GlassBox agent names):
 
-| task        | agent               | pillar          | purpose |
-|-------------|---------------------|-----------------|---------|
-| `reason`    | Reasoner            | Explainability  | Faithful Glass Box reasoning labels from a score breakdown |
-| `mentor`    | Mentor              | Education       | Socratic review of scoring-function code (math/security/perf) |
-| `simulate`  | Persona simulator   | Cold Start      | Synthetic interactions for a persona over a catalog |
-| `architect` | Architect pipeline  | Logic Drift     | Plain-language business goal → slider proposal with rationale + tradeoffs |
+| task          | agent               | pillar          | purpose |
+|---------------|---------------------|-----------------|---------|
+| `reason`      | Reasoner            | Explainability  | Faithful Glass Box reasoning labels from a score breakdown |
+| `mentor`      | Mentor              | Education       | Socratic review of scoring-function code (math/security/perf) |
+| `mentor_chat` | Mentor chat         | Education       | One Socratic dialogue turn after a blocked commit (multi-turn) |
+| `simulate`    | Persona simulator   | Cold Start      | Synthetic interactions for a persona over a catalog |
+| `architect`   | Architect pipeline  | Logic Drift     | Plain-language business goal → slider proposal with rationale + tradeoffs |
 
 The Architect is a **SequentialAgent**: a tool-using planner (grounded by the
 deterministic `translate_slider_config` FunctionTool — the exact production
@@ -24,6 +25,7 @@ The split exists because `output_schema` disables tools in ADK.
 
 ## Example Use Cases
 - **Mentor**: TS `scoring.commit` → `{task:"mentor", code}` → `{isValid, issues[], summary, dialogue[]}`. If `isValid=false`, the commit is blocked and the dialogue is shown in the editor.
+- **Mentor chat**: after a block, TS `scoring.mentorReply` → `{task:"mentor_chat", code, transcript[], message}` → `{reply, followUpQuestion, readyToCommit}`. The engineer answers the Socratic question; the Mentor deepens understanding (never writes the fix) and signals when they are ready to re-commit.
 - **Reasoner**: TS Coordinator computes ranked items + `scoreBreakdown`, sends `{task:"reason", items}` → `{labels[]}` shown as per-item Glass Box explanations.
 - **Persona**: `{task:"simulate", persona, catalog}` → `{interactions[], summary}`; TS persists interactions and derives the persona preference vector (embedding stays in TS).
 - **Architect**: TS `alignment.proposeFromGoal` → `{task:"architect", goal, currentSliders?, catalogSummary?}` → `{profileName, sliders, derived, rationale, tradeoffs[]}`; the TS side re-derives the retrieval params with the same math so the proposal can never drift from execution.

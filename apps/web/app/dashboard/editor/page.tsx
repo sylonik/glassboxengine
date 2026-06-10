@@ -12,6 +12,7 @@ import {
   Lightbulb,
   MessageSquare,
   Save,
+  Send,
   ShieldAlert,
   Sigma,
   XCircle,
@@ -45,6 +46,12 @@ interface MentorReview {
   dialogue: string[];
   issues: ValidationIssue[];
   summary?: string;
+}
+
+/** One turn in the multi-turn Socratic dialogue after a blocked commit. */
+interface ChatTurn {
+  role: "user" | "mentor";
+  text: string;
 }
 
 const ISSUE_CATEGORIES: Array<{
@@ -136,6 +143,9 @@ function EditorPageContent({
   const [functionName, setFunctionName] = useState("Default Scorer");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [readyToCommit, setReadyToCommit] = useState(false);
 
   const trpc = useTRPC();
 
@@ -167,9 +177,29 @@ function EditorPageContent({
     })
   );
 
+  const mentorReplyFn = useMutation(
+    trpc.scoring.mentorReply.mutationOptions({
+      onSuccess: (turn) => {
+        setChatTurns((previous) => [
+          ...previous,
+          {
+            role: "mentor",
+            text: [turn.reply, turn.followUpQuestion]
+              .filter(Boolean)
+              .join("\n→ "),
+          },
+        ]);
+        setReadyToCommit(turn.readyToCommit);
+      },
+      onError: (error) => setActionError(error.message),
+    })
+  );
+
   const commitFn = useMutation(
     trpc.scoring.commit.mutationOptions({
       onSuccess: (data) => {
+        setChatTurns([]);
+        setReadyToCommit(false);
         if (data.blocked) {
           setCommitBlocked(true);
           setMentorReview({
@@ -240,6 +270,23 @@ function EditorPageContent({
     setCommitBlocked(false);
     setHasUnsavedChanges(false);
     setActionError(null);
+    setChatTurns([]);
+    setChatInput("");
+    setReadyToCommit(false);
+  };
+
+  const handleSendChat = () => {
+    const message = chatInput.trim();
+    if (!message || !functionId || mentorReplyFn.isPending) return;
+    const transcript = [
+      ...(mentorReview?.dialogue ?? []),
+      ...chatTurns.map(
+        (turn) => `${turn.role === "user" ? "Engineer" : "Mentor"}: ${turn.text}`
+      ),
+    ];
+    setChatTurns((previous) => [...previous, { role: "user", text: message }]);
+    setChatInput("");
+    mentorReplyFn.mutate({ id: functionId, transcript, message });
   };
 
   return (
@@ -383,7 +430,19 @@ function EditorPageContent({
               )}
 
               {!commitFn.isPending && mentorReview ? (
-                <MentorReviewView review={mentorReview} />
+                <>
+                  <MentorReviewView review={mentorReview} />
+                  {commitBlocked && (
+                    <MentorDialogue
+                      turns={chatTurns}
+                      input={chatInput}
+                      onInputChange={setChatInput}
+                      onSend={handleSendChat}
+                      isPending={mentorReplyFn.isPending}
+                      readyToCommit={readyToCommit}
+                    />
+                  )}
+                </>
               ) : !commitFn.isPending ? (
                 <div className="pt-2">
                   <p className="text-sm leading-relaxed text-muted-foreground">
@@ -562,6 +621,107 @@ function MentorReviewView({ review }: { review: MentorReview }) {
             ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Multi-turn Socratic dialogue: after a blocked commit the engineer can answer
+ * the Mentor's questions and get follow-ups, instead of a one-shot review. The
+ * Mentor never writes the fix — when it judges the engineer understands, it
+ * surfaces a "ready to commit" nudge.
+ */
+function MentorDialogue({
+  turns,
+  input,
+  onInputChange,
+  onSend,
+  isPending,
+  readyToCommit,
+}: {
+  turns: ChatTurn[];
+  input: string;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  isPending: boolean;
+  readyToCommit: boolean;
+}) {
+  return (
+    <div className="mt-4 border-t border-border pt-4">
+      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <MessageSquare size={13} />
+        Talk it through
+      </div>
+      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+        Answer the Mentor&apos;s questions to show you understand the fix. It
+        guides — it won&apos;t write the code for you.
+      </p>
+
+      {turns.length > 0 && (
+        <div className="mb-3 flex flex-col gap-2">
+          {turns.map((turn, i) => (
+            <div
+              key={i}
+              className={cn(
+                "whitespace-pre-wrap rounded-md border p-2.5 text-sm leading-relaxed",
+                turn.role === "user"
+                  ? "ml-6 border-border bg-surface-raised text-foreground"
+                  : "mr-6 border-l-[3px] border-l-primary bg-background text-foreground"
+              )}
+            >
+              {turn.role === "mentor" && (
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  Mentor
+                </span>
+              )}
+              {turn.text}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isPending && (
+        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "0ms" }} />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "200ms" }} />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "400ms" }} />
+          <span>Mentor is thinking…</span>
+        </div>
+      )}
+
+      {readyToCommit && (
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-success/30 bg-success-subtle p-2.5 text-sm text-success">
+          <CheckCircle size={15} className="mt-0.5 shrink-0" />
+          <span>
+            You&apos;ve got it. Apply your fix in the editor, then hit Commit
+            again.
+          </span>
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <textarea
+          className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          value={input}
+          onChange={(event) => onInputChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              onSend();
+            }
+          }}
+          placeholder="e.g. The division by maxViews can divide by zero when the catalog is empty…"
+          disabled={isPending}
+        />
+        <Button
+          size="icon"
+          onClick={onSend}
+          disabled={isPending || !input.trim()}
+          title="Send (⌘/Ctrl + Enter)"
+        >
+          <Send size={14} />
+        </Button>
+      </div>
     </div>
   );
 }

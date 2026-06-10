@@ -20,6 +20,10 @@ import {
   runMentorAgent as legacyRunMentorAgent,
   type MentorResult,
 } from "./mentor";
+export {
+  runMentorDialogue,
+  type MentorDialogueTurn,
+} from "./mentor";
 import {
   runPersonaSimulatorAgent as legacyRunPersonaSimulatorAgent,
   generateBehaviorFromDescription as legacyGenerateBehaviorFromDescription,

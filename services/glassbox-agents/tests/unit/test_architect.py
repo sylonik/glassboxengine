@@ -60,13 +60,14 @@ def test_architect_is_a_sequential_pipeline_with_grounding_tool() -> None:
     assert formatter.output_schema is not None and not formatter.tools
 
 
-def test_coordinator_routes_to_all_four_specialists() -> None:
+def test_coordinator_routes_to_all_specialists() -> None:
     coordinator = build_coordinator()
 
     names = {agent.name for agent in coordinator.sub_agents}
     assert names == {
         "reasoner_agent",
         "mentor_agent",
+        "mentor_chat_agent",
         "persona_simulator_agent",
         "architect_pipeline",
     }

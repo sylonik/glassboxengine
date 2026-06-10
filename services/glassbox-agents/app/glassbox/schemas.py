@@ -122,6 +122,36 @@ class MentorOutput(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Mentor chat (Education) — multi-turn Socratic dialogue follow-ups.
+# ---------------------------------------------------------------------------
+
+
+class MentorChatOutput(BaseModel):
+    """Structured output for a single Socratic dialogue turn."""
+
+    reply: str = Field(
+        description=(
+            "The mentor's response to the engineer's message: acknowledge what "
+            "they got right, correct misconceptions, and deepen understanding. "
+            "NEVER include the corrected code."
+        )
+    )
+    followUpQuestion: str | None = Field(
+        default=None,
+        description=(
+            "The next Socratic question to ask, or null when the engineer has "
+            "demonstrated they understand the fix."
+        ),
+    )
+    readyToCommit: bool = Field(
+        description=(
+            "True when the engineer's reasoning shows they understand the issues "
+            "well enough to fix the code and re-commit."
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
 # Architect (Logic Drift) — business goal -> proposed slider configuration.
 # ---------------------------------------------------------------------------
 

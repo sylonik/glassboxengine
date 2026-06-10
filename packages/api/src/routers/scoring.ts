@@ -149,4 +149,35 @@ export const scoringRouter = createTRPCRouter({
         function: result[0],
       };
     }),
+
+  /**
+   * One Socratic dialogue turn after a blocked commit: the engineer answers
+   * the Mentor's question and gets a response that deepens understanding
+   * (never the fixed code) plus a ready-to-commit signal.
+   */
+  mentorReply: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        transcript: z.array(z.string().max(2000)).max(60),
+        message: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const fn = await ctx.db
+        .select()
+        .from(scoringFunctions)
+        .where(
+          and(
+            eq(scoringFunctions.id, input.id),
+            eq(scoringFunctions.userId, ctx.user.id)
+          )
+        )
+        .limit(1);
+
+      if (fn.length === 0) throw new Error("Scoring function not found");
+
+      const { runMentorDialogue } = await import("@glassbox/agents");
+      return runMentorDialogue(fn[0]!.code, input.transcript, input.message);
+    }),
 });

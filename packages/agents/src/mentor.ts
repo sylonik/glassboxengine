@@ -36,6 +36,12 @@ export async function runMentorAgent(code: string): Promise<MentorResult> {
       const remote = await callGlassboxAgent<RemoteMentorOutput>("mentor", {
         code,
       });
+      // Guard against a Coordinator routing slip (e.g. "mentor" mis-delegated
+      // to the mentor_chat agent): if the shape isn't a review, throw so we
+      // fall back to in-process validation rather than silently blocking.
+      if (typeof remote.isValid !== "boolean") {
+        throw new Error("Agent service returned a non-review mentor payload");
+      }
       return {
         approved: remote.isValid,
         validation: {
@@ -120,8 +126,13 @@ export async function runMentorDialogue(
         "mentor_chat",
         { code, transcript, message }
       );
+      // Guard against a Coordinator routing slip (e.g. "mentor_chat" mis-routed
+      // to the review agent, which returns no reply): fall back to in-process.
+      if (typeof remote.reply !== "string" || !remote.reply) {
+        throw new Error("Agent service returned a non-dialogue mentor payload");
+      }
       return {
-        reply: remote.reply ?? "",
+        reply: remote.reply,
         followUpQuestion: remote.followUpQuestion ?? null,
         readyToCommit: Boolean(remote.readyToCommit),
       };

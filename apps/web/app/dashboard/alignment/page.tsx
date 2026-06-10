@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useTRPC } from "~/trpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useActiveProject } from "../project_context";
-import { Play, Save, ScanEye, Users } from "lucide-react";
+import { Play, Save, ScanEye, Sparkles, Users } from "lucide-react";
 import { PageHeader } from "~/components/layout/page-header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -74,6 +74,25 @@ interface PersonaRef {
   name: string;
 }
 
+interface ArchitectProposalView {
+  profileName: string;
+  sliders: SliderState;
+  derived: {
+    similarityThreshold: number;
+    candidateLimit: number;
+    weights: {
+      similarity: number;
+      diversity: number;
+      novelty: number;
+      popularity: number;
+    };
+  };
+  rationale: string;
+  tradeoffs: string[];
+  runtime: "agent-engine" | "in-process";
+  traceId: string;
+}
+
 export default function AlignmentPage() {
   const projectContext = useActiveProject();
 
@@ -108,6 +127,8 @@ function AlignmentPageContent({
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>("");
   const [appliedPersona, setAppliedPersona] = useState<PersonaRef | null>(null);
+  const [goalText, setGoalText] = useState("");
+  const [proposal, setProposal] = useState<ArchitectProposalView | null>(null);
 
   const trpc = useTRPC();
 
@@ -152,7 +173,20 @@ function AlignmentPageContent({
       onError: (error) => setActionError(error.message),
     })
   );
-  const isBusy = createProfile.isPending || updateSliders.isPending;
+  const proposeFromGoal = useMutation(
+    trpc.alignment.proposeFromGoal.mutationOptions({
+      onSuccess: (data) => {
+        setProposal(data as ArchitectProposalView);
+        setActionError(null);
+      },
+      onError: (error) => setActionError(error.message),
+    })
+  );
+
+  const isBusy =
+    createProfile.isPending ||
+    updateSliders.isPending ||
+    proposeFromGoal.isPending;
 
   const handleSliderChange = useCallback((key: keyof SliderState, value: number) => {
     setDraftSliders((prev) => ({ ...(prev ?? sliders), [key]: value }));
@@ -178,15 +212,16 @@ function AlignmentPageContent({
     } catch {}
   };
 
-  const handleRunAlignment = async () => {
+  const handleRunAlignment = async (overrideSliders?: SliderState) => {
     setActionError(null);
+    const runSliders = overrideSliders ?? sliders;
     try {
       let targetProfileId = profileId;
       if (!targetProfileId) {
         const created = await createProfile.mutateAsync({
           projectId: activeProjectId,
           name: "Default Profile",
-          sliders,
+          sliders: runSliders,
         });
         targetProfileId = created?.id ?? null;
       }
@@ -196,11 +231,33 @@ function AlignmentPageContent({
       }
       await updateSliders.mutateAsync({
         profileId: targetProfileId,
-        sliders,
+        sliders: runSliders,
         queryText: queryText.trim() || undefined,
         personaId: selectedPersonaId || undefined,
       });
     } catch {}
+  };
+
+  const handleAskArchitect = async () => {
+    const goal = goalText.trim();
+    if (goal.length < 8) {
+      setActionError("Describe the business goal in a full sentence.");
+      return;
+    }
+    setActionError(null);
+    setProposal(null);
+    try {
+      await proposeFromGoal.mutateAsync({
+        projectId: activeProjectId,
+        goal,
+      });
+    } catch {}
+  };
+
+  const handleApplyProposal = async (run: boolean) => {
+    if (!proposal) return;
+    setDraftSliders(proposal.sliders);
+    if (run) await handleRunAlignment(proposal.sliders);
   };
 
   const getReasoningForItem = (itemId: string) => reasoning.find((r) => r.itemId === itemId);
@@ -223,6 +280,125 @@ function AlignmentPageContent({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr] items-start">
         {/* Left: Controls */}
         <div className="flex flex-col gap-4">
+          {/* Architect Agent Card */}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={15} className="text-primary" />
+              <h2 className="text-base font-semibold text-foreground">
+                Ask the Architect
+              </h2>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Describe a business goal in plain language. The Architect Agent
+              proposes slider values and explains the tradeoffs — you stay in
+              control of what gets applied.
+            </p>
+            <textarea
+              className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              value={goalText}
+              onChange={(event) => setGoalText(event.target.value)}
+              placeholder='e.g. "Push our new arrivals this month, but keep the feed relevant enough that conversion does not crater."'
+              disabled={isBusy}
+            />
+            <Button
+              className="mt-3 w-full"
+              onClick={handleAskArchitect}
+              disabled={isBusy || goalText.trim().length < 8}
+            >
+              {proposeFromGoal.isPending ? (
+                <span className="animate-spin h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" />
+              ) : (
+                <Sparkles size={14} />
+              )}
+              {proposeFromGoal.isPending
+                ? "Architect is reasoning…"
+                : "Propose slider configuration"}
+            </Button>
+
+            {proposal && (
+              <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    {proposal.profileName}
+                  </span>
+                  <Badge variant="outline" className="font-mono text-[10px]">
+                    {proposal.runtime === "agent-engine"
+                      ? "Vertex Agent Engine"
+                      : "Gemini in-process"}
+                  </Badge>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(Object.keys(SLIDER_LABELS) as Array<keyof SliderState>).map(
+                    (key) => {
+                      const next = proposal.sliders[key];
+                      const delta = next - sliders[key];
+                      return (
+                        <Badge key={key} variant="secondary" className="font-mono text-[10px]">
+                          {SLIDER_LABELS[key].label[0]}: {next.toFixed(2)}
+                          {Math.abs(delta) >= 0.005 && (
+                            <span
+                              className={
+                                delta > 0 ? "text-success" : "text-destructive"
+                              }
+                            >
+                              {" "}
+                              {delta > 0 ? "▲" : "▼"}
+                              {Math.abs(delta).toFixed(2)}
+                            </span>
+                          )}
+                        </Badge>
+                      );
+                    }
+                  )}
+                </div>
+
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {proposal.rationale}
+                </p>
+
+                {proposal.tradeoffs.length > 0 && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {proposal.tradeoffs.map((tradeoff, index) => (
+                      <li
+                        key={index}
+                        className="flex items-start gap-1.5 text-xs text-muted-foreground"
+                      >
+                        <span className="mt-0.5 text-warning">⚖</span>
+                        <span>{tradeoff}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+                  threshold {proposal.derived.similarityThreshold.toFixed(2)} ·
+                  pool {proposal.derived.candidateLimit} · trace {proposal.traceId}
+                </p>
+
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleApplyProposal(true)}
+                    disabled={isBusy}
+                  >
+                    <Play size={13} />
+                    Apply & Run
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleApplyProposal(false)}
+                    disabled={isBusy}
+                  >
+                    Apply only
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Intent Sliders Card */}
           <div className="rounded-lg border border-border bg-card p-5">
             <h2 className="text-base font-semibold text-foreground mb-5">
@@ -306,7 +482,7 @@ function AlignmentPageContent({
               </Button>
               <Button
                 variant="secondary"
-                onClick={handleRunAlignment}
+                onClick={() => handleRunAlignment()}
                 disabled={isBusy}
               >
                 {updateSliders.isPending ? (

@@ -63,6 +63,14 @@ export const generateBehaviorFromDescription = useAdk
 // Architect and Reasoner are always the legacy exports (called directly in some places)
 export { runArchitectAgent } from "./architect";
 export { runReasonerAgent } from "./reasoner";
+
+// Architect advisor: plain-language business goal -> slider proposal (ADK
+// Architect pipeline on Agent Engine, with in-process Gemini fallback).
+export {
+  proposeAlignmentFromGoal,
+  type ArchitectProposal,
+  type CatalogSummary,
+} from "./architect-advisor";
 export {
   clampScore,
   createPolicySpec,

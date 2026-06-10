@@ -122,6 +122,78 @@ class MentorOutput(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Architect (Logic Drift) — business goal -> proposed slider configuration.
+# ---------------------------------------------------------------------------
+
+
+class SliderProposal(BaseModel):
+    """Proposed intent-slider values, each in [0, 1]."""
+
+    relevance: float = Field(ge=0.0, le=1.0, description="Relevance slider value.")
+    diversity: float = Field(ge=0.0, le=1.0, description="Diversity slider value.")
+    novelty: float = Field(ge=0.0, le=1.0, description="Novelty slider value.")
+    popularity: float = Field(ge=0.0, le=1.0, description="Popularity slider value.")
+
+
+class RankingWeights(BaseModel):
+    """The deterministic ranking weights derived by translate_slider_config."""
+
+    similarity: float = Field(ge=0.0, le=1.0)
+    diversity: float = Field(ge=0.0, le=1.0)
+    novelty: float = Field(ge=0.0, le=1.0)
+    popularity: float = Field(ge=0.0, le=1.0)
+
+
+class DerivedRetrievalParams(BaseModel):
+    """Retrieval parameters the production engine derives from the sliders."""
+
+    similarityThreshold: float = Field(
+        description="pgvector similarity threshold derived from the relevance slider."
+    )
+    candidateLimit: int = Field(
+        description="Candidate pool size derived from the diversity slider."
+    )
+    weights: RankingWeights = Field(
+        description="The four ranking weights, copied from the tool result."
+    )
+
+
+class ArchitectOutput(BaseModel):
+    """Structured output for the Architect agent."""
+
+    profileName: str = Field(
+        description=(
+            "A short, human-readable name for this intent profile, e.g. "
+            "'Margin-first discovery'. Max ~5 words."
+        )
+    )
+    sliders: SliderProposal = Field(
+        description="The proposed slider values (clamped by translate_slider_config)."
+    )
+    derived: DerivedRetrievalParams = Field(
+        description=(
+            "The deterministic retrieval parameters returned by the "
+            "translate_slider_config tool for the proposed sliders. Copy them "
+            "verbatim — never invent these numbers."
+        )
+    )
+    rationale: str = Field(
+        description=(
+            "2-4 sentences explaining why these slider values serve the stated "
+            "business goal, grounded in the goal and any catalog context provided."
+        )
+    )
+    tradeoffs: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Explicit tradeoffs the business should understand, one per entry, "
+            "e.g. 'Raising novelty surfaces unproven items, which can lower "
+            "short-term conversion.'"
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Persona Simulator (Cold Start) — synthetic interactions.
 # ---------------------------------------------------------------------------
 

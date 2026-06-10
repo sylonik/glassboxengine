@@ -37,7 +37,7 @@ const AGENT_SERVICE_TIMEOUT_MS = Number(
   process.env.GLASSBOX_AGENT_SERVICE_TIMEOUT_MS ?? "45000"
 );
 
-export type GlassboxAgentTask = "reason" | "mentor" | "simulate";
+export type GlassboxAgentTask = "reason" | "mentor" | "simulate" | "architect";
 
 /** True when a remote agent service (Agent Engine or local ADK) is configured. */
 export function isAgentServiceEnabled(): boolean {
@@ -80,7 +80,7 @@ function parseLooseJson<T>(text: string): T {
  * (network, timeout, non-JSON) so callers can fall back to in-process logic.
  */
 export async function callGlassboxAgent<T>(
-  task: GlassboxAgentTask | (string & {}),
+  task: GlassboxAgentTask,
   payload: Record<string, unknown>
 ): Promise<T> {
   if (AGENT_ENGINE) {

@@ -21,17 +21,25 @@ Coordinator must not.
 
 import os
 
-from google.adk.agents import Agent
+from google.adk.agents import Agent, SequentialAgent
 from google.adk.models import Gemini
 from google.genai import types
 
 from app.glassbox.prompts import (
+    ARCHITECT_FORMATTER_INSTRUCTION,
+    ARCHITECT_PLANNER_INSTRUCTION,
     COORDINATOR_INSTRUCTION,
     MENTOR_INSTRUCTION,
     PERSONA_INSTRUCTION,
     REASONER_INSTRUCTION,
 )
-from app.glassbox.schemas import MentorOutput, PersonaSimOutput, ReasonerOutput
+from app.glassbox.schemas import (
+    ArchitectOutput,
+    MentorOutput,
+    PersonaSimOutput,
+    ReasonerOutput,
+)
+from app.glassbox.tools import translate_slider_config
 
 # gemini-2.5-flash is available on Vertex AI in us-east1 (the Agent Engine
 # region). The AI-Studio alias "gemini-flash-latest" is NOT a Vertex publisher
@@ -92,6 +100,47 @@ def build_persona() -> Agent:
     )
 
 
+def build_architect() -> SequentialAgent:
+    """Architect pipeline (Logic Drift): business goal -> slider proposal.
+
+    A two-step SequentialAgent: the planner reasons about the goal and grounds
+    its proposal by calling the deterministic translate_slider_config tool (the
+    exact production slider->retrieval math); the formatter then emits the
+    structured ArchitectOutput. The split exists because output_schema disables
+    tools, so a single agent cannot both call the tool and guarantee JSON.
+    """
+    planner = Agent(
+        name="architect_planner",
+        model=_build_model(),
+        description=(
+            "Reasons about a plain-language business goal and proposes intent-slider "
+            "values, grounded by the deterministic translate_slider_config tool."
+        ),
+        instruction=ARCHITECT_PLANNER_INSTRUCTION,
+        tools=[translate_slider_config],
+        output_key="architect_plan",
+    )
+    formatter = Agent(
+        name="architect_formatter",
+        model=_build_model(),
+        description=(
+            "Formats the architect planner's analysis into the structured "
+            "ArchitectOutput JSON."
+        ),
+        instruction=ARCHITECT_FORMATTER_INSTRUCTION,
+        output_schema=ArchitectOutput,
+        output_key="architect_proposal",
+    )
+    return SequentialAgent(
+        name="architect_pipeline",
+        description=(
+            "Converts a plain-language business goal into a transparent intent-slider "
+            "proposal with the exact retrieval parameters the production engine derives."
+        ),
+        sub_agents=[planner, formatter],
+    )
+
+
 def build_coordinator() -> Agent:
     """Coordinator root agent: routes by the JSON `task` field to the leaf agents.
 
@@ -100,14 +149,16 @@ def build_coordinator() -> Agent:
     reasoner = build_reasoner()
     mentor = build_mentor()
     persona_simulator = build_persona()
+    architect = build_architect()
 
     return Agent(
         name="glassbox_coordinator",
         model=_build_model(),
         description=(
             "Routes GlassBox reasoning tasks to the Reasoner (explainability), Mentor "
-            "(education), or Persona Simulator (cold start) based on a JSON `task` field."
+            "(education), Persona Simulator (cold start), or Architect (goal alignment) "
+            "based on a JSON `task` field."
         ),
         instruction=COORDINATOR_INSTRUCTION,
-        sub_agents=[reasoner, mentor, persona_simulator],
+        sub_agents=[reasoner, mentor, persona_simulator, architect],
     )

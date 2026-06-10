@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { PRODUCTS, type Product } from "../../../lib/catalog";
+import { resolveIntent } from "../../../lib/intent";
 
 /**
  * Server-side proxy to the engine's public /api/glassbox.feed endpoint.
  * Maps engine feed items back onto local storefront products via the
  * externalId (the product slug the catalog was imported with), with a
  * name-based fallback for catalogs imported before external ids existed.
+ *
+ * This is where personalization is decided: the storefront only sends the
+ * `userId` (+ an optional search `queryText`). The server resolves that user
+ * into an *intent* (queryText + policy sliders) via resolveIntent() and passes
+ * it to the engine. That's why different shoppers get different feeds from the
+ * same catalog — see lib/intent.ts for the full rationale. An explicit search
+ * query, when present, overrides the persona's default query so search becomes
+ * a *personalized re-rank* rather than a flat catalog filter.
  *
  * Always returns 200 with `items: []` on any engine failure — the rail is
  * progressive enhancement, never a broken storefront.
@@ -54,13 +63,27 @@ const byName = new Map(PRODUCTS.map((p) => [p.name.toLowerCase(), p]));
 export async function POST(req: Request) {
   let userId = "anon";
   let limit = 12;
+  let searchQuery: string | undefined;
   try {
-    const body = (await req.json()) as { userId?: string; limit?: number };
+    const body = (await req.json()) as {
+      userId?: string;
+      limit?: number;
+      queryText?: string;
+    };
     if (body.userId) userId = body.userId;
     if (typeof body.limit === "number") limit = Math.min(body.limit, 24);
+    if (typeof body.queryText === "string" && body.queryText.trim()) {
+      searchQuery = body.queryText.trim();
+    }
   } catch {
     /* defaults */
   }
+
+  // Personalization decision happens server-side: resolve the user into an
+  // intent (queryText + sliders). A live search query, if present, takes the
+  // place of the persona's default query so the feed re-ranks for that search.
+  const intent = resolveIntent(userId);
+  const effectiveQuery = searchQuery ?? intent.queryText;
 
   const apiKey =
     process.env.GLASSBOX_API_KEY ??
@@ -87,8 +110,9 @@ export async function POST(req: Request) {
       signal: AbortSignal.timeout(20_000),
       body: JSON.stringify({
         userId,
-        queryText: "personalized storefront picks",
+        queryText: effectiveQuery,
         limit,
+        sliders: intent.sliders,
       }),
     });
     if (!res.ok) {
@@ -119,6 +143,9 @@ export async function POST(req: Request) {
       traceId: feed.traceId ?? null,
       summary: feed.summary ?? null,
       explanation: feed.searchExplanation ?? null,
+      // Echo back how this feed was personalized so the rail can self-explain.
+      intentLabel: searchQuery ? "search re-rank" : intent.label,
+      queryText: effectiveQuery,
       items,
     });
   } catch {

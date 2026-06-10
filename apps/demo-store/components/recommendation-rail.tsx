@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { formatPrice, type Product } from "../lib/catalog";
 import { useShopper } from "../lib/shopper-context";
 import { useTracker, useTrackerReady } from "./tracker-provider";
@@ -29,6 +30,8 @@ interface RailResponse {
   traceId: string | null;
   summary: string | null;
   explanation: string | null;
+  intentLabel?: string | null;
+  queryText?: string | null;
   items: RailItem[];
 }
 
@@ -45,6 +48,8 @@ export function RecommendationRail() {
   const { shopper } = useShopper();
   const tracker = useTracker();
   const trackerReady = useTrackerReady();
+  const searchParams = useSearchParams();
+  const query = (searchParams.get("q") ?? "").trim();
   const [data, setData] = useState<RailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [openWhy, setOpenWhy] = useState<string | null>(null);
@@ -60,7 +65,13 @@ export function RecommendationRail() {
         const res = await fetch("/api/recommendations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: shopper.id || "anon", limit: 12 }),
+          body: JSON.stringify({
+            userId: shopper.id || "anon",
+            limit: 12,
+            // When the shopper is searching, the live query drives a
+            // personalized re-rank instead of the persona's default intent.
+            ...(query ? { queryText: query } : {}),
+          }),
         });
         const json = (await res.json()) as RailResponse;
         if (!cancelled) setData(json);
@@ -74,7 +85,7 @@ export function RecommendationRail() {
     return () => {
       cancelled = true;
     };
-  }, [shopper.id, trackerReady]);
+  }, [shopper.id, trackerReady, query]);
 
   if (loading) {
     return (
@@ -97,9 +108,14 @@ export function RecommendationRail() {
   return (
     <section className="container rail">
       <div className="rail-head">
-        <h2>Recommended for {shopper.short || "you"}</h2>
+        <h2>
+          {query
+            ? `Search re-ranked for ${shopper.short || "you"}: “${query}”`
+            : `Recommended for ${shopper.short || "you"}`}
+        </h2>
         <span className="rail-tag" title={data.explanation ?? undefined}>
           ✦ Ranked by GlassBox Engine
+          {data.intentLabel ? ` · ${data.intentLabel}` : ""}
           {data.traceId ? ` · trace ${data.traceId.slice(0, 18)}…` : ""}
         </span>
       </div>

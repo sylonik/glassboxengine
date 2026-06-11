@@ -351,7 +351,7 @@
 /* ── demo video ── */
 .lp-demo-video { text-align: center; }
 .lp-video-wrap { margin-top: 40px; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px var(--lp-line); max-width: 960px; margin-left: auto; margin-right: auto; background: #000; }
-.lp-video { display: block; width: 100%; height: auto; max-height: 540px; object-fit: contain; }
+.lp-video { display: block; width: 100%; height: auto; max-height: 540px; aspect-ratio: 16/9; object-fit: contain; }
 
 /* ── responsive ── */
 @media (max-width: 900px) {

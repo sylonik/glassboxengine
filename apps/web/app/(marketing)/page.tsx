@@ -381,7 +381,7 @@ export default function LandingPage() {
             src="/videos/glassbox-demo.mp4"
             controls
             preload="none"
-            poster="/screenshots/mobile-preview.png"
+            poster="/screenshots/desktop-preview.png"
             playsInline
           />
         </div>

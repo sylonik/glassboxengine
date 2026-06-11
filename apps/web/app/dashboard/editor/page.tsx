@@ -93,25 +93,25 @@ const SEVERITY_ORDER: ValidationIssue["severity"][] = [
 
 const DEFAULT_CODE = `// GlassBox Scoring Function
 // Available context: { product, sliders, similarity, categoryDiversity, userHistory, maxViews }
+// Weights are normalized so the maximum possible score equals 1.0
 
 function score(ctx) {
   const { product, sliders } = ctx;
+  const seen = new Set(Array.isArray(ctx.userHistory) ? ctx.userHistory : []);
+  const n = (v) => (Number.isFinite(v) ? v : 0); // guards NaN/Infinity/null/undefined
 
-  // Base relevance from embedding similarity
-  let score = ctx.similarity * sliders.relevance;
+  // Normalized weights sum to 1.0 — prevents score saturation before clamping
+  const w = { relevance: 0.55, diversity: 0.20, novelty: 0.15, popularity: 0.10 };
 
-  // Diversity bonus for underrepresented categories
-  score += ctx.categoryDiversity * sliders.diversity * 0.3;
-
-  // Novelty: boost items the user hasn't seen
-  if (!ctx.userHistory.includes(product.id)) {
-    score += sliders.novelty * 0.2;
+  let score = n(ctx.similarity) * n(sliders.relevance) * w.relevance;
+  score += n(ctx.categoryDiversity) * n(sliders.diversity) * w.diversity;
+  if (!seen.has(product.id)) {
+    score += n(sliders.novelty) * w.novelty;
   }
+  const views = n(ctx.maxViews) > 0 ? n(product.viewCount) / n(ctx.maxViews) : 0;
+  score += views * n(sliders.popularity) * w.popularity;
 
-  // Popularity signal
-  score += (product.viewCount / ctx.maxViews) * sliders.popularity * 0.15;
-
-  return Math.min(score, 1.0);
+  return Math.max(0, Math.min(score, 1.0));
 }`;
 
 export default function EditorPage() {
